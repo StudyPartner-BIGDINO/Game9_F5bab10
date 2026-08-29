@@ -1,0 +1,1678 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Level 5 - 秘藏档案库</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+
+        :root {
+            --bg-dark: #0d0a07;
+            --parchment-bg: #221810;
+            --parchment-border: #8c6a3a;
+            --gold-primary: #ffd700;
+            --gold-light: #fff2a3;
+            --gold-dark: #b8860b;
+            --amber-warm: #ffaa00;
+            --text-light: #f5e8d0;
+            --text-dim: #ba9e7b;
+            --accent-red: #d94343;
+            --accent-green: #4caf50;
+        }
+
+        body {
+            background: radial-gradient(circle at center, #26190f 0%, #110b07 70%, #050302 100%);
+            color: var(--text-light);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+            min-height: 100vh;
+            min-height: 100dvh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        /* Overlay Screens */
+        .overlay-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            height: 100dvh;
+            background: rgba(10, 7, 5, 0.92);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            opacity: 1;
+            transition: opacity 0.5s ease;
+            padding: 20px;
+        }
+
+        .overlay-screen.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .parchment-card {
+            background: linear-gradient(145deg, #2a1e14 0%, #1a120b 100%);
+            border: 2px solid var(--parchment-border);
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8), inset 0 0 20px rgba(255, 215, 0, 0.05);
+            padding: 28px 24px;
+            max-width: 420px;
+            width: 100%;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .parchment-card::before {
+            content: '';
+            position: absolute;
+            top: 4px; left: 4px; right: 4px; bottom: 4px;
+            border: 1px solid rgba(255, 215, 0, 0.15);
+            border-radius: 12px;
+            pointer-events: none;
+        }
+
+        /* Loading Bar CSS */
+        .loading-bar-container {
+            width: 100%;
+            height: 12px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--parchment-border);
+            border-radius: 6px;
+            overflow: hidden;
+            position: relative;
+            margin: 18px 0 10px;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6);
+        }
+
+        .loading-bar-fill {
+            width: 0%;
+            height: 100%;
+            background: linear-gradient(90deg, #b8860b 0%, #ffd700 100%);
+            box-shadow: 0 0 8px rgba(255, 215, 0, 0.6);
+            transition: width 0.3s ease-out;
+        }
+
+        .loading-percent-text {
+            color: var(--text-dim);
+            font-size: 0.95rem;
+            font-family: monospace;
+            letter-spacing: 1px;
+        }
+
+        /* UI Buttons */
+        .btn-gold {
+            background: linear-gradient(135deg, #ffd700 0%, #c59b27 100%);
+            color: #120c05;
+            border: none;
+            padding: 12px 28px;
+            font-size: 1.05rem;
+            font-weight: bold;
+            border-radius: 25px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.25);
+            transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+            display: inline-block;
+            margin-top: 15px;
+            touch-action: manipulation;
+        }
+
+        .btn-gold:active {
+            transform: scale(0.96);
+            box-shadow: 0 2px 8px rgba(255, 215, 0, 0.4);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.08);
+            color: var(--text-light);
+            border: 1px solid rgba(255, 215, 0, 0.3);
+            padding: 10px 22px;
+            font-size: 0.95rem;
+            border-radius: 20px;
+            cursor: pointer;
+            margin: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-secondary:active {
+            background: rgba(255, 215, 0, 0.15);
+        }
+
+        /* 1. Opening Intro Animation */
+        #opening-screen .parchment-scroll {
+            background: linear-gradient(135deg, #3d2c1d 0%, #20150c 100%);
+            border: 2px solid var(--gold-dark);
+            border-radius: 12px;
+            padding: 40px 25px;
+            box-shadow: 0 0 40px rgba(0,0,0,0.9), 0 0 15px rgba(255, 215, 0, 0.2);
+            animation: unfoldParchment 1.8s cubic-bezier(0.25, 1, 0.5, 1) forwards;
+            transform-origin: center;
+        }
+
+        @keyframes unfoldParchment {
+            0% { transform: scale(0.2) rotateX(80deg); opacity: 0; }
+            50% { opacity: 1; }
+            100% { transform: scale(1) rotateX(0deg); opacity: 1; }
+        }
+
+        .opening-title {
+            font-size: 2.2rem;
+            color: var(--gold-primary);
+            text-shadow: 0 0 12px rgba(255, 215, 0, 0.5);
+            letter-spacing: 2px;
+            margin-bottom: 6px;
+        }
+
+        .opening-cn-title {
+            font-size: 1.8rem;
+            color: #f3e5ab;
+            margin-bottom: 4px;
+            letter-spacing: 4px;
+        }
+
+        .opening-subtitle {
+            font-size: 0.85rem;
+            color: var(--text-dim);
+            letter-spacing: 2px;
+            margin-bottom: 20px;
+        }
+
+        .opening-quote {
+            font-size: 1.05rem;
+            color: var(--amber-warm);
+            font-style: italic;
+            opacity: 0;
+            animation: fadeInQuote 1s ease forwards 1.2s;
+        }
+
+        @keyframes fadeInQuote {
+            to { opacity: 1; }
+        }
+
+        /* 2. Mission Instructions */
+        .mission-target-preview {
+            width: 75px;
+            height: 75px;
+            margin: 15px auto;
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 215, 0, 0.05);
+            border: 1px dashed var(--gold-dark);
+            border-radius: 50%;
+            padding: 8px;
+        }
+
+        .mission-target-preview img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.4));
+        }
+
+        .flow-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            margin: 20px 0 10px;
+            background: rgba(0, 0, 0, 0.25);
+            padding: 12px 8px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 215, 0, 0.1);
+        }
+
+        .flow-step {
+            font-size: 0.85rem;
+            color: var(--gold-light);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .flow-arrow {
+            color: var(--gold-dark);
+            font-weight: bold;
+        }
+
+        /* 3. Mobile-First HUD Bar */
+        #game-hud {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 52px;
+            background: rgba(18, 12, 7, 0.95);
+            border-bottom: 1px solid var(--parchment-border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            padding-top: max(0px, env(safe-area-inset-top));
+            z-index: 100;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.6);
+        }
+
+        .hud-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.95rem;
+            color: var(--text-light);
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .hud-title {
+            font-weight: bold;
+            color: var(--gold-primary);
+            letter-spacing: 1px;
+        }
+
+        .hud-progress {
+            background: rgba(255, 215, 0, 0.1);
+            padding: 4px 10px;
+            border-radius: 12px;
+            border: 1px solid rgba(255, 215, 0, 0.2);
+            color: var(--gold-light);
+            font-weight: 500;
+        }
+
+        .hud-timer {
+            font-family: monospace;
+            font-size: 1.05rem;
+            color: var(--amber-warm);
+        }
+
+        .hud-actions {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+
+        .hud-audio-btn {
+            background: rgba(255, 215, 0, 0.15);
+            border: 1px solid var(--gold-dark);
+            color: var(--gold-light);
+            padding: 4px 8px;
+            border-radius: 14px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            touch-action: manipulation;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .hud-audio-btn:active {
+            background: var(--gold-dark);
+            color: #000;
+        }
+
+        .pause-btn-hud {
+            background: rgba(255, 215, 0, 0.15);
+            border: 1px solid var(--gold-dark);
+            color: var(--gold-light);
+            padding: 5px 12px;
+            border-radius: 14px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            touch-action: manipulation;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        .pause-btn-hud:active {
+            background: var(--gold-dark);
+            color: #000;
+        }
+
+        /* Responsive Mobile HUD (320px - 480px portrait) */
+        @media (max-width: 480px) {
+            #game-hud {
+                height: calc(44px + env(safe-area-inset-top, 0px));
+                padding: env(safe-area-inset-top, 0px) 10px 0 10px;
+                gap: 2px;
+            }
+
+            .hud-item {
+                font-size: clamp(10px, 3vw, 12px);
+                gap: 3px;
+            }
+
+            .hud-title {
+                font-size: clamp(11px, 3.2vw, 13px);
+            }
+
+            .hud-progress {
+                padding: 2px 6px;
+                border-radius: 10px;
+                font-size: clamp(10px, 3vw, 12px);
+            }
+
+            .hud-timer {
+                font-size: clamp(10px, 3.2vw, 12px);
+            }
+
+            .hud-actions {
+                gap: 4px;
+            }
+
+            .hud-audio-btn {
+                padding: 3px 6px;
+                border-radius: 10px;
+                font-size: clamp(10px, 3vw, 12px);
+            }
+
+            .pause-btn-hud {
+                padding: 3px 8px;
+                border-radius: 10px;
+                font-size: clamp(10px, 2.8vw, 11px);
+            }
+        }
+
+        /* 4. Dynamic Scattered Search Container */
+        #search-container {
+            width: 100%;
+            max-width: 480px;
+            height: calc(100dvh - 60px - env(safe-area-inset-top, 0px));
+            margin-top: calc(52px + env(safe-area-inset-top, 0px));
+            position: relative;
+            overflow: hidden;
+            background: radial-gradient(circle, rgba(42, 30, 20, 0.5) 0%, rgba(15, 10, 6, 0.8) 100%);
+            border: 1px solid rgba(255, 215, 0, 0.15);
+            border-radius: 16px;
+            box-shadow: inset 0 0 30px rgba(0,0,0,0.8);
+            touch-action: none;
+        }
+
+        @media (max-width: 480px) {
+            #search-container {
+                width: 98vw;
+                height: calc(100dvh - 50px - env(safe-area-inset-top, 0px));
+                margin-top: calc(46px + env(safe-area-inset-top, 0px));
+                border-radius: 12px;
+            }
+        }
+
+        .search-item {
+            position: absolute;
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            touch-action: manipulation;
+            transform-origin: center center;
+            will-change: transform;
+        }
+
+        /* Normal Coin & Undiscovered Seal Default Visual Treatment */
+        .search-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.7));
+            pointer-events: auto;
+        }
+
+        /* Coin Tap Animation */
+        @keyframes coinTapAnim {
+            0% { transform: translate(-50%, -50%) rotate(var(--rot)) scale(var(--sc)); }
+            40% { transform: translate(-50%, calc(-50% - 8px)) rotate(calc(var(--rot) + 8deg)) scale(calc(var(--sc) * 1.18)); z-index: 90 !important; }
+            100% { transform: translate(-50%, -50%) rotate(var(--rot)) scale(var(--sc)); }
+        }
+
+        .coin-tapped {
+            animation: coinTapAnim 0.38s ease-out;
+        }
+
+        /* Discovered Seal Active Glow Animation */
+        .seal-discovered {
+            z-index: 100 !important;
+        }
+
+        .seal-discovered img {
+            filter: drop-shadow(0 0 12px rgba(255, 215, 0, 0.9)) brightness(1.2) !important;
+            animation: sealGlowAnim 0.6s ease-out forwards;
+        }
+
+        @keyframes sealGlowAnim {
+            0% { transform: translate(-50%, -50%) rotate(var(--rot)) scale(var(--sc)); }
+            50% { transform: translate(-50%, -50%) rotate(0deg) scale(1.3); }
+            100% { transform: translate(-50%, -50%) rotate(var(--rot)) scale(calc(var(--sc) * 1.1)); }
+        }
+
+        /* Collected Seal State */
+        .seal-collected {
+            opacity: 0.22;
+            filter: grayscale(0.8) brightness(0.4) !important;
+            pointer-events: none !important;
+            transform: translate(-50%, -50%) rotate(var(--rot)) scale(calc(var(--sc) * 0.82)) !important;
+        }
+
+        /* 5. Question Modal */
+        #question-modal .parchment-card {
+            max-width: 460px;
+            padding: 22px 18px;
+            text-align: left;
+        }
+
+        .discovery-header {
+            text-align: center;
+            margin-bottom: 12px;
+        }
+
+        .discovery-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, rgba(255,215,0,0.2) 0%, rgba(184,134,11,0.2) 100%);
+            border: 1px solid var(--gold-primary);
+            color: var(--gold-primary);
+            padding: 4px 16px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            letter-spacing: 1px;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
+        }
+
+        .modal-seal-preview {
+            width: 55px;
+            height: 55px;
+            margin: 8px auto 12px;
+            display: block;
+            filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.6));
+            animation: sealGlowPulse 2s infinite ease-in-out;
+        }
+
+        @keyframes sealGlowPulse {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 8px rgba(255, 215, 0, 0.5)); }
+            50% { transform: scale(1.08); filter: drop-shadow(0 0 16px rgba(255, 215, 0, 0.8)); }
+        }
+
+        .question-text {
+            font-size: 0.98rem;
+            line-height: 1.45;
+            color: var(--text-light);
+            background: rgba(0, 0, 0, 0.3);
+            padding: 12px 14px;
+            border-radius: 10px;
+            border-left: 3px solid var(--gold-dark);
+            margin-bottom: 16px;
+            white-space: pre-line;
+            max-height: 180px;
+            overflow-y: auto;
+        }
+
+        .options-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .option-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 215, 0, 0.25);
+            color: var(--text-light);
+            padding: 11px 14px;
+            border-radius: 10px;
+            text-align: left;
+            font-size: 0.92rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            touch-action: manipulation;
+        }
+
+        .option-label {
+            background: rgba(255, 215, 0, 0.15);
+            color: var(--gold-light);
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            flex-shrink: 0;
+            border: 1px solid rgba(255, 215, 0, 0.3);
+        }
+
+        .option-btn:active {
+            background: rgba(255, 215, 0, 0.15);
+        }
+
+        .option-btn.wrong-choice {
+            background: rgba(217, 67, 67, 0.2);
+            border-color: var(--accent-red);
+            animation: shakeChoice 0.3s ease;
+        }
+
+        @keyframes shakeChoice {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-6px); }
+            75% { transform: translateX(6px); }
+        }
+
+        .option-btn.correct-choice {
+            background: rgba(76, 175, 80, 0.25);
+            border-color: var(--accent-green);
+        }
+
+        .feedback-banner {
+            margin-top: 12px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 0.95rem;
+            min-height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .feedback-banner.correct {
+            background: rgba(76, 175, 80, 0.2);
+            color: #81c784;
+            border: 1px solid rgba(76, 175, 80, 0.4);
+        }
+
+        .feedback-banner.wrong {
+            background: rgba(217, 67, 67, 0.2);
+            color: #e57373;
+            border: 1px solid rgba(217, 67, 67, 0.4);
+        }
+
+        /* 6. Pause Overlay */
+        .pause-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        /* 7. Completion Screen */
+        .stamps-row {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .completion-stamp-icon {
+            width: 42px;
+            height: 42px;
+            object-fit: contain;
+            filter: drop-shadow(0 0 6px rgba(255, 215, 0, 0.6));
+            animation: popStamp 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.27) backwards;
+        }
+
+        @keyframes popStamp {
+            0% { transform: scale(0) rotate(-30deg); opacity: 0; }
+            100% { transform: scale(1) rotate(0deg); opacity: 1; }
+        }
+
+        .completion-stats {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            padding: 12px;
+            margin: 15px 0;
+            display: flex;
+            justify-content: space-around;
+            border: 1px solid rgba(255, 215, 0, 0.15);
+        }
+
+        .stat-box {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+        }
+
+        .stat-val {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--gold-light);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 1. Opening Animation Screen -->
+    <div id="opening-screen" class="overlay-screen">
+        <div class="parchment-scroll">
+            <h1 class="opening-title">LEVEL 5</h1>
+            <div class="opening-cn-title">秘藏档案库</div>
+            <div class="opening-subtitle">THE HIDDEN ARCHIVE</div>
+            <p class="opening-quote">「尘封的档案已经开启……」</p>
+        </div>
+    </div>
+
+    <!-- Loading Screen Overlay -->
+    <div id="loading-screen" class="overlay-screen hidden">
+        <div class="parchment-card" style="max-width: 380px;">
+            <h2 style="color: var(--gold-primary); font-size: 1.4rem; margin-bottom: 6px;">Loading Ancient Archive...</h2>
+            <div style="color: #f3e5ab; font-size: 1.1rem; letter-spacing: 2px;">正在整理古代档案...</div>
+            
+            <div class="loading-bar-container">
+                <div id="loading-bar-fill" class="loading-bar-fill"></div>
+            </div>
+            <div id="loading-percent" class="loading-percent-text">0%</div>
+        </div>
+    </div>
+
+    <!-- 2. Mission Instruction Screen -->
+    <div id="mission-screen" class="overlay-screen hidden">
+        <div class="parchment-card">
+            <h2 style="color: var(--gold-primary); font-size: 1.5rem; margin-bottom: 12px;">任务说明</h2>
+            <p style="color: var(--text-light); font-size: 0.98rem; line-height: 1.5;">
+                档案中隐藏着 <strong>6</strong> 枚王室印章。<br>
+                找出所有王室印章，解开其中封存的历史问题。
+            </p>
+            
+            <div class="mission-target-preview">
+                <img src="level5_stamp.png" alt="Royal Stamp">
+            </div>
+
+            <div class="flow-container">
+                <div class="flow-step">
+                    <span>找到印章</span>
+                </div>
+                <div class="flow-arrow">➔</div>
+                <div class="flow-step">
+                    <span>回答历史问题</span>
+                </div>
+                <div class="flow-arrow">➔</div>
+                <div class="flow-step">
+                    <span>完成挑战</span>
+                </div>
+            </div>
+
+            <button id="start-mission-btn" class="btn-gold">开始任务</button>
+        </div>
+    </div>
+
+    <!-- 3. Main Game HUD & Search Grid -->
+    <div id="game-hud">
+        <div class="hud-item hud-title">LEVEL 5</div>
+        <div class="hud-item hud-progress">已找到 <span id="progress-count">0</span> / 6</div>
+        <div class="hud-item hud-timer">⏱ <span id="timer-display">00:00</span></div>
+        <div class="hud-actions">
+            <button id="audio-btn" class="hud-audio-btn" aria-label="音效开关">🔊</button>
+            <button id="pause-btn" class="pause-btn-hud">暂停</button>
+        </div>
+    </div>
+
+    <div id="search-container">
+        <!-- Dynamic scattered interactive objects created in JavaScript -->
+    </div>
+
+    <!-- 4. Question Modal -->
+    <div id="question-modal" class="overlay-screen hidden">
+        <div class="parchment-card">
+            <div class="discovery-header">
+                <span class="discovery-badge">发现王室印章！</span>
+            </div>
+            <img src="level5_stamp.png" alt="Stamp Preview" class="modal-seal-preview">
+            
+            <div id="q-text" class="question-text">
+                <!-- Question text inserted dynamically -->
+            </div>
+
+            <div id="q-options" class="options-grid">
+                <!-- 4 Options inserted dynamically -->
+            </div>
+
+            <div id="feedback-msg" class="feedback-banner" style="display: none;"></div>
+        </div>
+    </div>
+
+    <!-- 5. Pause Modal -->
+    <div id="pause-modal" class="overlay-screen hidden">
+        <div class="parchment-card">
+            <h2 style="color: var(--gold-primary); margin-bottom: 15px;">游戏暂停</h2>
+            <div class="pause-actions">
+                <button id="resume-btn" class="btn-gold">继续游戏</button>
+                <button id="restart-btn" class="btn-secondary">重新开始</button>
+                <button id="exit-btn" class="btn-secondary">返回地图</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 6. Completion Modal -->
+    <div id="completion-modal" class="overlay-screen hidden">
+        <div class="parchment-card">
+            <h2 style="color: var(--gold-primary); font-size: 1.6rem; margin-bottom: 6px;">秘藏档案已解锁</h2>
+            <p style="color: var(--amber-warm); font-size: 1.1rem; letter-spacing: 1px;">LEVEL 5 通关完成</p>
+
+            <div class="stamps-row">
+                <img src="level5_stamp.png" class="completion-stamp-icon" style="animation-delay: 0.1s;" alt="Stamp">
+                <img src="level5_stamp.png" class="completion-stamp-icon" style="animation-delay: 0.2s;" alt="Stamp">
+                <img src="level5_stamp.png" class="completion-stamp-icon" style="animation-delay: 0.3s;" alt="Stamp">
+                <img src="level5_stamp.png" class="completion-stamp-icon" style="animation-delay: 0.4s;" alt="Stamp">
+                <img src="level5_stamp.png" class="completion-stamp-icon" style="animation-delay: 0.5s;" alt="Stamp">
+                <img src="level5_stamp.png" class="completion-stamp-icon" style="animation-delay: 0.6s;" alt="Stamp">
+            </div>
+
+            <div class="completion-stats">
+                <div class="stat-box">
+                    <span class="stat-label">完成题目</span>
+                    <span class="stat-val">6 / 6</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-label">用时</span>
+                    <span id="final-time-val" class="stat-val">00:00</span>
+                </div>
+            </div>
+
+            <button id="complete-game-btn" class="btn-gold">完成通关</button>
+        </div>
+    </div>
+
+    <!-- Audio Manager Class -->
+    <script>
+        class AudioManager {
+            constructor() {
+                this.isMuted = localStorage.getItem('level5_audio_muted') === 'true';
+                this.isQuestionMode = false;
+                this.bgmFadeInterval = null;
+                this.isInitialized = false;
+
+                // BGM Instance
+                this.bgm = new Audio('level5_bgm.mp3');
+                this.bgm.loop = true;
+                this.bgm.volume = this.isMuted ? 0 : 0.30;
+
+                // Single SFX elements
+                this.openSfx = new Audio('level5_open.mp3');
+                this.sealFoundSfx = new Audio('level5_seal_found.mp3');
+                this.wrongSfx = new Audio('level5_wrong.wav');
+                this.correctSfx = new Audio('level5_correct-answer.wav');
+                this.completeSfx = new Audio('game-level-completed.wav');
+
+                // Pool for coin tap SFX (6 instances for rapid clicking)
+                this.coinPoolSize = 6;
+                this.coinPool = [];
+                this.coinPoolIndex = 0;
+                for (let i = 0; i < this.coinPoolSize; i++) {
+                    const a = new Audio('level5_coin_tap.mp3');
+                    a.preload = 'auto';
+                    this.coinPool.push(a);
+                }
+
+                // Preload non-blocking
+                [this.openSfx, this.sealFoundSfx, this.wrongSfx, this.correctSfx, this.completeSfx].forEach(a => {
+                    a.preload = 'auto';
+                });
+            }
+
+            init() {
+                if (this.isInitialized) return;
+                this.isInitialized = true;
+                if (!this.isMuted) {
+                    this.startBGM();
+                }
+            }
+
+            playOpening() {
+                if (this.isMuted) return;
+                this.openSfx.volume = 0.40;
+                const p = this.openSfx.play();
+                if (p !== undefined) {
+                    p.catch(e => {
+                        console.log("Opening audio autoplay deferred/blocked.");
+                    });
+                }
+            }
+
+            startBGM() {
+                if (this.isMuted) {
+                    this.bgm.volume = 0;
+                } else {
+                    this.bgm.volume = this.isQuestionMode ? 0.10 : 0.30;
+                }
+                const p = this.bgm.play();
+                if (p !== undefined) {
+                    p.catch(e => {
+                        console.log("BGM play deferred:", e);
+                    });
+                }
+            }
+
+            pauseBGM() {
+                try {
+                    this.bgm.pause();
+                } catch (e) {}
+            }
+
+            resumeBGM() {
+                if (this.isMuted) return;
+                this.bgm.volume = this.isQuestionMode ? 0.10 : 0.30;
+                const p = this.bgm.play();
+                if (p !== undefined) {
+                    p.catch(e => {});
+                }
+            }
+
+            stopBGM() {
+                try {
+                    this.bgm.pause();
+                    this.bgm.currentTime = 0;
+                } catch (e) {}
+            }
+
+            setQuestionMode(inQuestion) {
+                this.isQuestionMode = inQuestion;
+                if (this.isMuted) return;
+
+                const targetVol = inQuestion ? 0.10 : 0.30;
+                this.fadeBGMVolume(targetVol, 400);
+            }
+
+            fadeBGMVolume(targetVol, durationMs = 400) {
+                if (this.isMuted) {
+                    this.bgm.volume = 0;
+                    return;
+                }
+                clearInterval(this.bgmFadeInterval);
+                const startVol = this.bgm.volume;
+                const startTime = performance.now();
+
+                this.bgmFadeInterval = setInterval(() => {
+                    const elapsed = performance.now() - startTime;
+                    const progress = Math.min(elapsed / durationMs, 1);
+                    this.bgm.volume = startVol + (targetVol - startVol) * progress;
+                    if (progress >= 1) {
+                        clearInterval(this.bgmFadeInterval);
+                    }
+                }, 30);
+            }
+
+            playCoinTap() {
+                if (this.isMuted) return;
+                try {
+                    const coinAudio = this.coinPool[this.coinPoolIndex];
+                    this.coinPoolIndex = (this.coinPoolIndex + 1) % this.coinPoolSize;
+                    
+                    coinAudio.pause();
+                    coinAudio.currentTime = 0;
+                    coinAudio.volume = 0.25;
+
+                    // Subtle random pitch variation between 0.94 and 1.06
+                    const pitch = 0.94 + Math.random() * 0.12;
+                    coinAudio.playbackRate = pitch;
+
+                    const p = coinAudio.play();
+                    if (p !== undefined) p.catch(() => {});
+                } catch(e) {}
+            }
+
+            playSealFound() {
+                if (this.isMuted) return;
+                try {
+                    this.sealFoundSfx.pause();
+                    this.sealFoundSfx.currentTime = 0;
+                    this.sealFoundSfx.volume = 0.55;
+                    const p = this.sealFoundSfx.play();
+                    if (p !== undefined) p.catch(() => {});
+                } catch(e) {}
+            }
+
+            playWrong() {
+                if (this.isMuted) return;
+                try {
+                    this.wrongSfx.pause();
+                    this.wrongSfx.currentTime = 0;
+                    this.wrongSfx.volume = 0.50;
+                    const p = this.wrongSfx.play();
+                    if (p !== undefined) p.catch(() => {});
+                } catch(e) {}
+            }
+
+            playCorrect() {
+                if (this.isMuted) return;
+                try {
+                    this.correctSfx.pause();
+                    this.correctSfx.currentTime = 0;
+                    this.correctSfx.volume = 0.55;
+                    const p = this.correctSfx.play();
+                    if (p !== undefined) p.catch(() => {});
+                } catch(e) {}
+            }
+
+            playComplete() {
+                this.stopBGM();
+                if (this.isMuted) return;
+                try {
+                    this.completeSfx.pause();
+                    this.completeSfx.currentTime = 0;
+                    this.completeSfx.volume = 0.65;
+                    const p = this.completeSfx.play();
+                    if (p !== undefined) p.catch(() => {});
+                } catch(e) {}
+            }
+
+            toggleMute() {
+                this.isMuted = !this.isMuted;
+                localStorage.setItem('level5_audio_muted', this.isMuted ? 'true' : 'false');
+
+                if (this.isMuted) {
+                    this.bgm.volume = 0;
+                } else {
+                    const targetVol = this.isQuestionMode ? 0.10 : 0.30;
+                    this.bgm.volume = targetVol;
+                    if (this.bgm.paused && this.isInitialized && !isPaused) {
+                        this.bgm.play().catch(() => {});
+                    }
+                }
+                return this.isMuted;
+            }
+        }
+
+        // Global Audio Manager Instance
+        const audioMgr = new AudioManager();
+    </script>
+
+    <!-- Game Logic -->
+    <script>
+        // ==================================================
+        // GAME CONFIGURATION CONSTANTS
+        // Adjust object counts here; placement algorithm adapts automatically!
+        // ==================================================
+        const NORMAL_COIN_COUNT = 600;
+        const ROYAL_SEAL_COUNT = 6;
+
+        // Questions Database
+        const QUESTIONS = [
+            {
+                id: 1,
+                text: "Pulau Batu Putih melibatkan pertindihan tuntutan antara Malaysia dengan _____.",
+                options: [
+                    { label: "A", text: "Indonesia" },
+                    { label: "B", text: "Singapura" },
+                    { label: "C", text: "Brunei" },
+                    { label: "D", text: "Filipina" }
+                ],
+                correct: "B"
+            },
+            {
+                id: 2,
+                text: "Apakah alasan NGO Pencipta Alam di Eropah menentang minyak sawit?",
+                options: [
+                    { label: "A", text: "Minyak sawit terlalu mahal" },
+                    { label: "B", text: "Penanaman kelapa sawit dikatakan menyebabkan pencemaran alam dan kemusnahan habitat" },
+                    { label: "C", text: "Minyak sawit tidak mendapat permintaan" },
+                    { label: "D", text: "Minyak sawit menyebabkan inflasi" }
+                ],
+                correct: "B"
+            },
+            {
+                id: 3,
+                text: "Apakah pelan yang dilaksanakan Malaysia untuk menyokong hasrat PBB menjadikan dunia bebas AIDS pada tahun 2030?",
+                options: [
+                    { label: "A", text: "AFTA" },
+                    { label: "B", text: "NSPEA" },
+                    { label: "C", text: "SEANWFZ" },
+                    { label: "D", text: "MSPO" }
+                ],
+                correct: "B"
+            },
+            {
+                id: 4,
+                text: "Apakah ciri utama sistem kewangan Islam?",
+                options: [
+                    { label: "A", text: "Berlandaskan syarak" },
+                    { label: "B", text: "Berlandaskan sistem politik" },
+                    { label: "C", text: "Berlandaskan cukai" },
+                    { label: "D", text: "Berlandaskan perdagangan bebas" }
+                ],
+                correct: "A"
+            },
+            {
+                id: 5,
+                text: "Apakah instrumen yang menjadikan Malaysia sebagai pasaran terbesar di dunia?",
+                options: [
+                    { label: "A", text: "Tarif" },
+                    { label: "B", text: "Sukuk" },
+                    { label: "C", text: "Cukai" },
+                    { label: "D", text: "Saham ASEAN" }
+                ],
+                correct: "B"
+            },
+            {
+                id: 6,
+                text: "Apakah maksud sukuk?",
+                options: [
+                    { label: "A", text: "Sijil Kewangan Islam" },
+                    { label: "B", text: "Bank Islam" },
+                    { label: "C", text: "Sistem kewangan konvensional" },
+                    { label: "D", text: "Pelaburan asing" }
+                ],
+                correct: "A"
+            }
+        ];
+
+        // Game State Variables
+        let itemsData = [];
+        let completedCount = 0;
+        let secondsElapsed = 0;
+        let timerInterval = null;
+        let isPaused = false;
+        let activeSealItem = null;
+
+        // DOM Elements
+        const openingScreen = document.getElementById('opening-screen');
+        const loadingScreen = document.getElementById('loading-screen');
+        const missionScreen = document.getElementById('mission-screen');
+        const startMissionBtn = document.getElementById('start-mission-btn');
+        const searchContainer = document.getElementById('search-container');
+        const progressCountEl = document.getElementById('progress-count');
+        const timerDisplayEl = document.getElementById('timer-display');
+        const pauseBtn = document.getElementById('pause-btn');
+        const audioBtn = document.getElementById('audio-btn');
+        const pauseModal = document.getElementById('pause-modal');
+        const resumeBtn = document.getElementById('resume-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const exitBtn = document.getElementById('exit-btn');
+        const questionModal = document.getElementById('question-modal');
+        const qTextEl = document.getElementById('q-text');
+        const qOptionsEl = document.getElementById('q-options');
+        const feedbackMsgEl = document.getElementById('feedback-msg');
+        const completionModal = document.getElementById('completion-modal');
+        const finalTimeValEl = document.getElementById('final-time-val');
+        const completeGameBtn = document.getElementById('complete-game-btn');
+
+        // Audio Button UI Refresh
+        function updateAudioUI() {
+            audioBtn.textContent = audioMgr.isMuted ? '🔇' : '🔊';
+        }
+
+        audioBtn.addEventListener('click', () => {
+            const isMuted = audioMgr.toggleMute();
+            updateAudioUI();
+        });
+
+        // Initialize Audio UI state from saved preference
+        updateAudioUI();
+
+        let openingTransitioned = false;
+        function transitionFromOpeningToLoading() {
+            if (openingTransitioned) return;
+            openingTransitioned = true;
+            openingScreen.classList.add('hidden');
+            loadingScreen.classList.remove('hidden');
+            startLoadingProcess();
+        }
+
+        // Opening Animation Sequence
+        window.addEventListener('load', () => {
+            // Attempt to play opening cinematic audio
+            audioMgr.playOpening();
+
+            setTimeout(() => {
+                transitionFromOpeningToLoading();
+            }, 2600);
+
+            openingScreen.addEventListener('click', () => {
+                transitionFromOpeningToLoading();
+            });
+        });
+
+        // Loading Screen & Preloader Process
+        let isLoadingStarted = false;
+        function startLoadingProcess() {
+            if (isLoadingStarted) return;
+            isLoadingStarted = true;
+
+            const fillEl = document.getElementById('loading-bar-fill');
+            const percentEl = document.getElementById('loading-percent');
+
+            const imagesToLoad = ['level5_coin.png', 'level5_stamp.png'];
+            const audioToLoad = [
+                'level5_bgm.mp3',
+                'level5_open.mp3',
+                'level5_coin_tap.mp3',
+                'level5_seal_found.mp3',
+                'level5_wrong.wav',
+                'level5_correct-answer.wav',
+                'game-level-completed.wav'
+            ];
+
+            const totalSteps = imagesToLoad.length + audioToLoad.length + 1; // 2 + 7 + 1 (board generation)
+            let completedSteps = 0;
+
+            function advanceProgress() {
+                completedSteps++;
+                const pct = Math.min(100, Math.floor((completedSteps / totalSteps) * 100));
+                fillEl.style.width = pct + '%';
+                percentEl.textContent = pct + '%';
+
+                if (completedSteps >= totalSteps) {
+                    fillEl.style.width = '100%';
+                    percentEl.textContent = '100%';
+                    
+                    // After loading reaches 100%, wait about 800ms, then fade out smoothly and show Mission Screen
+                    setTimeout(() => {
+                        loadingScreen.classList.add('hidden');
+                        setTimeout(() => {
+                            missionScreen.classList.remove('hidden');
+                        }, 500);
+                    }, 800);
+                }
+            }
+
+            // Preload Images
+            imagesToLoad.forEach(src => {
+                const img = new Image();
+                img.onload = advanceProgress;
+                img.onerror = advanceProgress;
+                img.src = src;
+            });
+
+            // Preload Audios
+            audioToLoad.forEach(src => {
+                const audio = new Audio();
+                audio.preload = 'auto';
+                let done = false;
+                const handleDone = () => {
+                    if (!done) {
+                        done = true;
+                        advanceProgress();
+                    }
+                };
+                audio.addEventListener('canplaythrough', handleDone, { once: true });
+                audio.addEventListener('loadeddata', handleDone, { once: true });
+                audio.addEventListener('error', handleDone, { once: true });
+                audio.src = src;
+                audio.load();
+                setTimeout(handleDone, 1200); // Safety fallback timeout
+            });
+
+            // Prepare resources and render entire search board with 606 objects
+            setTimeout(() => {
+                prepareBoardDataAndRender();
+                advanceProgress();
+            }, 100);
+        }
+
+        // Start Mission Event
+        startMissionBtn.addEventListener('click', () => {
+            missionScreen.classList.add('hidden');
+            audioMgr.init();
+            startTimer();
+        });
+
+        // Prepare Game Data & Pre-render Board
+        function prepareBoardDataAndRender() {
+            completedCount = 0;
+            secondsElapsed = 0;
+            isPaused = false;
+            updateHUDProgress();
+            updateTimerDisplay();
+
+            // Prepare total objects dynamically based on configuration constants
+            itemsData = [];
+            
+            for (let i = 0; i < NORMAL_COIN_COUNT; i++) {
+                itemsData.push({
+                    type: 'coin',
+                    id: 'coin_' + i
+                });
+            }
+
+            for (let i = 0; i < ROYAL_SEAL_COUNT; i++) {
+                itemsData.push({
+                    type: 'seal',
+                    questionIndex: i,
+                    completed: false,
+                    id: 'seal_' + i
+                });
+            }
+
+            // Shuffle array randomly
+            for (let i = itemsData.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [itemsData[i], itemsData[j]] = [itemsData[j], itemsData[i]];
+            }
+
+            // Programmatic assertions verifying dynamic object counts
+            const coinCount = itemsData.filter(x => x.type === 'coin').length;
+            const sealCount = itemsData.filter(x => x.type === 'seal').length;
+            console.assert(coinCount === NORMAL_COIN_COUNT, `Expected ${NORMAL_COIN_COUNT} coins, got ${coinCount}`);
+            console.assert(sealCount === ROYAL_SEAL_COUNT, `Expected ${ROYAL_SEAL_COUNT} seals, got ${sealCount}`);
+            console.assert(itemsData.length === (NORMAL_COIN_COUNT + ROYAL_SEAL_COUNT), `Expected ${NORMAL_COIN_COUNT + ROYAL_SEAL_COUNT} items, got ${itemsData.length}`);
+
+            generateScatterLayout();
+            renderBoard();
+        }
+
+        // Initialize / Reset Level Game
+        function initGame() {
+            prepareBoardDataAndRender();
+            startTimer();
+        }
+
+        // Fully Dynamic Scattering Algorithm (Adapts automatically to any NORMAL_COIN_COUNT)
+        function generateScatterLayout() {
+            const totalObjects = itemsData.length;
+
+            // Dynamically calculate grid columns and rows based on total object count
+            const cols = Math.ceil(Math.sqrt(totalObjects * 0.92));
+            const rows = Math.ceil(totalObjects / cols);
+
+            const availableWidth = 93;  // percent available width in container
+            const availableHeight = 93; // percent available height in container
+
+            const cellW = availableWidth / cols;
+            const cellH = availableHeight / rows;
+
+            // Create grid zone coordinates
+            let zones = [];
+            for (let r = 0; r < rows; r++) {
+                for (let c = 0; c < cols; c++) {
+                    zones.push({ r, c });
+                }
+            }
+
+            // Shuffle zones
+            for (let i = zones.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [zones[i], zones[j]] = [zones[j], zones[i]];
+            }
+
+            // Calculate dynamic item width percentage to maintain proper density and overlap
+            const itemWidthPercent = Math.max(5.2, (cellW * 1.65)).toFixed(2);
+
+            // Assign positional properties to each item
+            itemsData.forEach((item, index) => {
+                const zone = zones[index];
+                
+                // Base staggered position
+                const staggerX = (zone.r % 2 === 1) ? (cellW * 0.45) : 0;
+                const baseX = 3.5 + zone.c * cellW + staggerX + (cellW * 0.5);
+                const baseY = 3.5 + zone.r * cellH + (cellH * 0.5);
+
+                // Controlled jitter offset (-45% to +45% of cell dimension)
+                const jitterX = (Math.random() - 0.5) * cellW * 0.9;
+                const jitterY = (Math.random() - 0.5) * cellH * 0.9;
+
+                // Clamp final center positions within safe margins (3.5% to 96.5%)
+                const finalX = Math.min(Math.max(baseX + jitterX, 3.5), 96.5);
+                const finalY = Math.min(Math.max(baseY + jitterY, 3.5), 96.5);
+
+                // Controlled rotation (-25deg to +25deg)
+                const rot = (Math.random() * 50 - 25).toFixed(1);
+
+                // Subtle scale variation (0.82 to 1.00)
+                const sc = (Math.random() * 0.18 + 0.82).toFixed(2);
+
+                // Layering z-index (seals sit at upper layer range 16-19 so center artwork remains visible)
+                const baseZ = item.type === 'seal' ? Math.floor(Math.random() * 4) + 16 : Math.floor(Math.random() * 12) + 1;
+
+                item.posX = finalX.toFixed(2);
+                item.posY = finalY.toFixed(2);
+                item.rot = rot;
+                item.scale = sc;
+                item.zIndex = baseZ;
+                item.widthPercent = itemWidthPercent;
+            });
+        }
+
+        // Render Scattered Search Area
+        function renderBoard() {
+            searchContainer.innerHTML = '';
+
+            // Use DocumentFragment for performant batch DOM insertion
+            const fragment = document.createDocumentFragment();
+
+            itemsData.forEach((item) => {
+                const el = document.createElement('div');
+                el.className = 'search-item' + (item.type === 'seal' ? ' seal-item' : '');
+                
+                el.style.left = `${item.posX}%`;
+                el.style.top = `${item.posY}%`;
+                if (item.widthPercent) {
+                    el.style.width = `${item.widthPercent}%`;
+                }
+                el.style.zIndex = item.zIndex;
+                el.style.setProperty('--rot', `${item.rot}deg`);
+                el.style.setProperty('--sc', item.scale);
+
+                const img = document.createElement('img');
+                img.src = item.type === 'coin' ? 'level5_coin.png' : 'level5_stamp.png';
+                img.alt = item.type === 'coin' ? 'Coin' : 'Royal Stamp';
+                img.style.transform = `translate(-50%, -50%) rotate(${item.rot}deg) scale(${item.scale})`;
+
+                if (item.type === 'seal' && item.completed) {
+                    el.classList.add('seal-collected');
+                }
+
+                el.appendChild(img);
+
+                // Touch / Click Handler
+                el.addEventListener('click', () => {
+                    if (isPaused) return;
+
+                    if (item.type === 'coin') {
+                        handleCoinClick(el);
+                    } else if (item.type === 'seal') {
+                        if (!item.completed) {
+                            handleSealClick(item, el);
+                        }
+                    }
+                });
+
+                fragment.appendChild(el);
+            });
+
+            searchContainer.appendChild(fragment);
+        }
+
+        // Tactile Coin Tap Interaction & Audio
+        function handleCoinClick(el) {
+            audioMgr.playCoinTap();
+            el.classList.remove('coin-tapped');
+            void el.offsetWidth; // Trigger reflow for animation
+            el.classList.add('coin-tapped');
+            
+            setTimeout(() => {
+                el.classList.remove('coin-tapped');
+            }, 400);
+        }
+
+        // Royal Seal Discovery Interaction & Audio
+        function handleSealClick(sealObj, sealElement) {
+            pauseTimer();
+            activeSealItem = { obj: sealObj, el: sealElement };
+            
+            // Play Seal Discovery Audio and lower BGM for Question mode
+            audioMgr.playSealFound();
+            audioMgr.setQuestionMode(true);
+
+            // Trigger discovery glow animation on seal AFTER user tap
+            sealElement.classList.add('seal-discovered');
+
+            const qData = QUESTIONS[sealObj.questionIndex];
+            qTextEl.textContent = qData.text;
+            
+            feedbackMsgEl.style.display = 'none';
+            feedbackMsgEl.className = 'feedback-banner';
+            feedbackMsgEl.textContent = '';
+
+            // Render option buttons
+            qOptionsEl.innerHTML = '';
+            qData.options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerHTML = `<span class="option-label">${opt.label}</span> <span>${opt.text}</span>`;
+                
+                btn.addEventListener('click', () => {
+                    checkAnswer(opt.label, qData.correct, btn);
+                });
+
+                qOptionsEl.appendChild(btn);
+            });
+
+            questionModal.classList.remove('hidden');
+        }
+
+        // Answer Verification & Audio
+        function checkAnswer(selectedLabel, correctLabel, buttonEl) {
+            if (selectedLabel === correctLabel) {
+                // Correct Choice
+                audioMgr.playCorrect();
+                buttonEl.classList.add('correct-choice');
+                
+                const allBtns = qOptionsEl.querySelectorAll('.option-btn');
+                allBtns.forEach(b => b.style.pointerEvents = 'none');
+
+                feedbackMsgEl.className = 'feedback-banner correct';
+                feedbackMsgEl.textContent = '回答正确！';
+                feedbackMsgEl.style.display = 'flex';
+
+                activeSealItem.obj.completed = true;
+                completedCount++;
+                updateHUDProgress();
+
+                if (activeSealItem.el) {
+                    activeSealItem.el.classList.remove('seal-discovered');
+                    activeSealItem.el.classList.add('seal-collected');
+                }
+
+                setTimeout(() => {
+                    questionModal.classList.add('hidden');
+                    if (completedCount >= ROYAL_SEAL_COUNT) {
+                        triggerLevelCompletion();
+                    } else {
+                        audioMgr.setQuestionMode(false);
+                        resumeTimer();
+                    }
+                }, 1200);
+
+            } else {
+                // Wrong Choice
+                audioMgr.playWrong();
+                buttonEl.classList.add('wrong-choice');
+                setTimeout(() => {
+                    buttonEl.classList.remove('wrong-choice');
+                }, 500);
+
+                feedbackMsgEl.className = 'feedback-banner wrong';
+                feedbackMsgEl.textContent = '答案不正确，再想一想。';
+                feedbackMsgEl.style.display = 'flex';
+            }
+        }
+
+        // Timer Operations
+        function startTimer() {
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                secondsElapsed++;
+                updateTimerDisplay();
+            }, 1000);
+        }
+
+        function pauseTimer() {
+            clearInterval(timerInterval);
+        }
+
+        function resumeTimer() {
+            startTimer();
+        }
+
+        function updateTimerDisplay() {
+            const mins = Math.floor(secondsElapsed / 60);
+            const secs = secondsElapsed % 60;
+            const formatted = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+            timerDisplayEl.textContent = formatted;
+            finalTimeValEl.textContent = formatted;
+        }
+
+        function updateHUDProgress() {
+            progressCountEl.textContent = completedCount;
+        }
+
+        // Pause Controls
+        pauseBtn.addEventListener('click', () => {
+            isPaused = true;
+            pauseTimer();
+            audioMgr.pauseBGM();
+            pauseModal.classList.remove('hidden');
+        });
+
+        resumeBtn.addEventListener('click', () => {
+            isPaused = false;
+            pauseModal.classList.add('hidden');
+            audioMgr.resumeBGM();
+            resumeTimer();
+        });
+
+        restartBtn.addEventListener('click', () => {
+            pauseModal.classList.add('hidden');
+            questionModal.classList.add('hidden');
+            completionModal.classList.add('hidden');
+            audioMgr.setQuestionMode(false);
+            audioMgr.startBGM();
+            initGame();
+        });
+
+        exitBtn.addEventListener('click', () => {
+            window.location.href = 'index.html';
+        });
+
+        // Trigger Completion View & Audio
+        function triggerLevelCompletion() {
+            pauseTimer();
+            audioMgr.playComplete();
+            completionModal.classList.remove('hidden');
+        }
+
+        // Save Progress & Unlock Level 6
+        completeGameBtn.addEventListener('click', () => {
+            saveProgressAndExit();
+        });
+
+        function saveProgressAndExit() {
+            const timeFormatted = timerDisplayEl.textContent;
+            const MAP_KEY = 'game_level_progression_v1';
+            
+            // Read index.html map progression state
+            let progress = null;
+            try {
+                const rawMap = localStorage.getItem(MAP_KEY);
+                if (rawMap) {
+                    progress = JSON.parse(rawMap);
+                }
+            } catch (e) {
+                console.error("Error reading map progress:", e);
+            }
+
+            if (!progress || typeof progress !== 'object') {
+                progress = {};
+            }
+            if (!progress.levels || typeof progress.levels !== 'object') {
+                progress.levels = {
+                    1: { unlocked: true, completed: false }
+                };
+            }
+
+            // Set Level 5 = completed & unlocked
+            if (!progress.levels[5]) {
+                progress.levels[5] = {};
+            }
+            progress.levels[5].completed = true;
+            progress.levels[5].unlocked = true;
+            progress.levels[5].score = 6;
+
+            // Set Level 6 = unlocked
+            if (!progress.levels[6]) {
+                progress.levels[6] = {};
+            }
+            progress.levels[6].unlocked = true;
+
+            // Recalculate statistics for index.html engine
+            let totalScore = 0;
+            let completedCount = 0;
+            Object.keys(progress.levels).forEach(k => {
+                const lvl = progress.levels[k];
+                if (lvl && lvl.completed) completedCount++;
+                if (lvl && typeof lvl.score === 'number') totalScore += lvl.score;
+            });
+
+            if (!progress.stats) {
+                progress.stats = {};
+            }
+            progress.stats.totalScore = totalScore;
+            progress.stats.levelsCompleted = completedCount;
+
+            // Save to game_level_progression_v1
+            try {
+                localStorage.setItem(MAP_KEY, JSON.stringify(progress));
+            } catch (e) {
+                console.error("Failed to save map progression:", e);
+            }
+
+            // Preserve sovereigns_relic_session for compatibility
+            try {
+                let session = {};
+                const rawSession = localStorage.getItem('sovereigns_relic_session');
+                if (rawSession) session = JSON.parse(rawSession);
+                
+                session.level5Completed = true;
+                session.level5Score = 6;
+                session.level5Time = timeFormatted;
+                session.level6Unlocked = true;
+                
+                if (typeof session.unlockedLevel === 'number') {
+                    session.unlockedLevel = Math.max(session.unlockedLevel, 6);
+                }
+                if (typeof session.currentLevel === 'number') {
+                    session.currentLevel = Math.max(session.currentLevel, 6);
+                }
+                if (Array.isArray(session.unlockedLevels)) {
+                    if (!session.unlockedLevels.includes(6)) {
+                        session.unlockedLevels.push(6);
+                    }
+                }
+                
+                localStorage.setItem('sovereigns_relic_session', JSON.stringify(session));
+            } catch (e) {}
+
+            // Individual backup key fallback
+            try {
+                localStorage.setItem('level5Completed', 'true');
+                localStorage.setItem('level6Unlocked', 'true');
+            } catch (e) {}
+
+            // Verification Check before redirecting
+            try {
+                const checkData = JSON.parse(localStorage.getItem(MAP_KEY));
+                const isL5Done = checkData && checkData.levels && checkData.levels[5] && checkData.levels[5].completed === true;
+                const isL6Open = checkData && checkData.levels && checkData.levels[6] && checkData.levels[6].unlocked === true;
+
+                if (!isL5Done || !isL6Open) {
+                    console.error("Verification failed: Level 5 completion or Level 6 unlock state missing in game_level_progression_v1", checkData);
+                } else {
+                    console.log("Verified Level 5 completion & Level 6 unlock successfully saved.");
+                }
+            } catch (e) {
+                console.error("Verification error:", e);
+            }
+
+            // Redirect to index.html
+            window.location.href = 'index.html';
+        }
+    </script>
+</body>
+</html>

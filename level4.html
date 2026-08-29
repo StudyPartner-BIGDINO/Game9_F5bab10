@@ -1,0 +1,1607 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Level 4 - 失落的王室宝藏</title>
+    <style>
+        /* ================================================== */
+        /* GLOBAL & RESET STYLES                              */
+        /* ================================================== */
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100vh;
+            height: 100dvh; /* Modern dynamic viewport height */
+            overflow: hidden;
+            background-color: #05070a;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            color: #f0f4f8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Responsive Viewport Wrapper (9:16 Portrait Optimized, Desktop Centered) */
+        .game-wrapper {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
+            max-width: 500px;
+            max-height: 888px;
+            background: #080b11;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.9), 0 0 15px rgba(212, 175, 55, 0.2);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Mobile Viewport & Top Alignment Override */
+        @media (max-width: 768px) {
+            body {
+                align-items: flex-start; /* Prevents centering top of wrapper outside visible viewport */
+            }
+
+            .game-wrapper {
+                height: 100dvh;
+                max-height: 100dvh;
+                box-shadow: none;
+            }
+        }
+
+        /* ================================================== */
+        /* LEVEL 4 TITLE SCREEN OVERLAY                       */
+        /* ================================================== */
+        .title-screen-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 130;
+            background: radial-gradient(circle at center, #182232 0%, #0a0e17 70%, #030508 100%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: calc(24px + env(safe-area-inset-top, 0px)) 24px calc(24px + env(safe-area-inset-bottom, 0px)) 24px;
+            transition: opacity 0.6s ease;
+        }
+
+        .title-card {
+            position: relative;
+            width: 100%;
+            max-width: 380px;
+            background: rgba(14, 18, 28, 0.85);
+            border: 2px solid #8b6d23;
+            border-radius: 16px;
+            padding: 36px 24px;
+            text-align: center;
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.85), inset 0 0 25px rgba(0, 0, 0, 0.9), 0 0 20px rgba(212, 175, 55, 0.2);
+            backdrop-filter: blur(10px);
+            animation: titleEntrance 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes titleEntrance {
+            0% { opacity: 0; transform: translateY(20px) scale(0.92); }
+            100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* Gold Corner Ornaments */
+        .title-card::before, .title-card::after {
+            content: '';
+            position: absolute;
+            width: 28px;
+            height: 28px;
+            border: 2px solid #ffd700;
+            pointer-events: none;
+        }
+        .title-card::before { top: 10px; left: 10px; border-right: none; border-bottom: none; }
+        .title-card::after { bottom: 10px; right: 10px; border-left: none; border-top: none; }
+
+        .title-badge {
+            font-size: 0.9rem;
+            letter-spacing: 4px;
+            color: #d4af37;
+            text-transform: uppercase;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-shadow: 0 0 8px rgba(212, 175, 55, 0.4);
+        }
+
+        .main-title {
+            font-size: 2.1rem;
+            color: #fff8e7;
+            margin-bottom: 14px;
+            text-shadow: 0 2px 6px rgba(0, 0, 0, 0.9), 0 0 14px rgba(212, 175, 55, 0.35);
+            font-family: Georgia, "Times New Roman", serif;
+            letter-spacing: 1px;
+        }
+
+        .royal-divider {
+            color: #c5a059;
+            font-size: 0.9rem;
+            letter-spacing: 6px;
+            margin-bottom: 16px;
+            opacity: 0.85;
+            text-shadow: 0 0 6px rgba(212, 175, 55, 0.4);
+        }
+
+        .title-desc {
+            font-size: 0.98rem;
+            color: #d8c3a5;
+            line-height: 1.7;
+            margin-bottom: 30px;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+        }
+
+        /* Medieval Enter Castle Button */
+        .enter-castle-btn {
+            display: inline-block;
+            width: 100%;
+            padding: 15px 24px;
+            background: linear-gradient(180deg, #c5a059 0%, #8b6d23 100%);
+            color: #0b0d10;
+            font-size: 1.15rem;
+            font-weight: bold;
+            border: 1px solid #ffe89c;
+            border-radius: 10px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.4), 0 0 15px rgba(212, 175, 55, 0.3);
+            transition: all 0.25s ease;
+            text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
+        }
+
+        .enter-castle-btn:hover {
+            background: linear-gradient(180deg, #d4af37 0%, #a07e2a 100%);
+            box-shadow: 0 8px 25px rgba(212, 175, 55, 0.5);
+            transform: translateY(-2px);
+        }
+
+        .enter-castle-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.8);
+        }
+
+        /* ================================================== */
+        /* OPENING VIDEO OVERLAY & CASTLE BUFFERING UI        */
+        /* ================================================== */
+        .video-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 100;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.8s ease;
+        }
+
+        .video-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .video-overlay video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Castle-themed Video Loading Overlay */
+        .video-loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 105;
+            background: rgba(8, 11, 17, 0.92);
+            backdrop-filter: blur(4px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 16px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+        }
+
+        .video-loading-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .loading-text {
+            font-size: 1.05rem;
+            color: #ffd700;
+            letter-spacing: 2px;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.4);
+            font-family: Georgia, serif;
+            text-align: center;
+            padding: 0 20px;
+        }
+
+        /* Subtle Gold Ring Loader */
+        .castle-loader-ring {
+            width: 42px;
+            height: 42px;
+            border: 3px solid rgba(212, 175, 55, 0.15);
+            border-top: 3px solid #ffd700;
+            border-radius: 50%;
+            animation: castleSpin 1.1s linear infinite;
+            box-shadow: 0 0 12px rgba(255, 215, 0, 0.2);
+        }
+
+        @keyframes castleSpin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .retry-loading-btn {
+            display: none;
+            margin-top: 10px;
+            padding: 10px 24px;
+            background: linear-gradient(180deg, #c5a059 0%, #8b6d23 100%);
+            color: #0b0d10;
+            font-size: 0.95rem;
+            font-weight: bold;
+            border: 1px solid #ffe89c;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+            transition: transform 0.2s ease;
+        }
+
+        .retry-loading-btn:active {
+            transform: scale(0.95);
+        }
+
+        /* Fallback Button if browser blocks audio playback */
+        .video-fallback-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(180deg, #c5a059 0%, #8b6d23 100%);
+            border: 2px solid #ffe89c;
+            color: #0b0d10;
+            padding: 16px 32px;
+            border-radius: 30px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 0 25px rgba(212, 175, 55, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+            z-index: 102;
+            display: none;
+            text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
+            white-space: nowrap;
+        }
+
+        /* ================================================== */
+        /* MISSION PARCHMENT & MODAL UI                       */
+        /* ================================================== */
+        .modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 120;
+            background: rgba(5, 7, 12, 0.65);
+            backdrop-filter: blur(2px);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: calc(20px + env(safe-area-inset-top, 0px)) 20px calc(20px + env(safe-area-inset-bottom, 0px)) 20px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.6s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* Medieval Parchment Style */
+        .parchment-card {
+            position: relative;
+            width: 100%;
+            max-width: 380px;
+            background: linear-gradient(135deg, rgba(42, 30, 20, 0.95) 0%, rgba(26, 18, 11, 0.95) 100%);
+            border: 2px solid #8b6d23;
+            border-radius: 12px;
+            padding: 30px 24px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.85), inset 0 0 20px rgba(0, 0, 0, 0.9), 0 0 15px rgba(212, 175, 55, 0.25);
+            transform: scale(0.85);
+            transition: transform 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .modal-overlay.active .parchment-card {
+            transform: scale(1);
+        }
+
+        /* Parchment Gold Corner Ornaments */
+        .parchment-card::before, .parchment-card::after {
+            content: '';
+            position: absolute;
+            width: 24px;
+            height: 24px;
+            border: 2px solid #ffd700;
+            pointer-events: none;
+        }
+        .parchment-card::before { top: 8px; left: 8px; border-right: none; border-bottom: none; }
+        .parchment-card::after { bottom: 8px; right: 8px; border-left: none; border-top: none; }
+
+        .parchment-title-badge {
+            font-size: 0.85rem;
+            letter-spacing: 3px;
+            color: #d4af37;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+            font-weight: bold;
+        }
+
+        .parchment-title {
+            font-size: 1.8rem;
+            color: #fff8e7;
+            margin-bottom: 18px;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.8), 0 0 10px rgba(212, 175, 55, 0.4);
+            font-family: Georgia, serif;
+        }
+
+        .parchment-body {
+            font-size: 0.95rem;
+            color: #d8c3a5;
+            line-height: 1.6;
+            margin-bottom: 26px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+        }
+
+        .medieval-btn {
+            display: inline-block;
+            width: 100%;
+            padding: 14px 20px;
+            background: linear-gradient(180deg, #c5a059 0%, #8b6d23 100%);
+            color: #0b0d10;
+            font-size: 1.1rem;
+            font-weight: bold;
+            border: 1px solid #ffe89c;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+            transition: all 0.2s ease;
+            text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
+        }
+
+        .medieval-btn:hover {
+            background: linear-gradient(180deg, #d4af37 0%, #a07e2a 100%);
+            box-shadow: 0 6px 20px rgba(212, 175, 55, 0.4);
+        }
+
+        .medieval-btn:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+        }
+
+        /* ================================================== */
+        /* MAIN GAME ENVIRONMENT & TOP TRACKER               */
+        /* ================================================== */
+        .game-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            z-index: 1;
+        }
+
+        /* Compact Top Tracker Bar (Safe-Area Spacing) */
+        .top-tracker-bar {
+            position: absolute;
+            top: calc(12px + env(safe-area-inset-top, 0px));
+            left: 50%;
+            transform: translateX(-50%);
+            width: 92%;
+            background: rgba(14, 18, 28, 0.88);
+            border: 1px solid rgba(212, 175, 55, 0.4);
+            border-radius: 12px;
+            padding: 8px 12px;
+            z-index: 30;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        @media (max-width: 768px) {
+            .top-tracker-bar {
+                top: max(10px, calc(8px + env(safe-area-inset-top, 0px)));
+                width: 94%;
+                padding: 6px 10px;
+            }
+        }
+
+        .tracker-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            font-size: 0.85rem;
+            color: #d4af37;
+            font-weight: bold;
+        }
+
+        .tracker-count {
+            color: #fff8e7;
+            background: rgba(212, 175, 55, 0.15);
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.8rem;
+            border: 1px solid rgba(212, 175, 55, 0.3);
+        }
+
+        .tracker-icons {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            width: 100%;
+        }
+
+        .tracker-icon-slot {
+            position: relative;
+            width: 38px;
+            height: 38px;
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .tracker-icon-slot img {
+            max-width: 26px;
+            max-height: 26px;
+            object-fit: contain;
+            opacity: 0.35;
+            filter: grayscale(90%);
+            transition: all 0.4s ease;
+        }
+
+        .tracker-icon-slot.completed {
+            border-color: #ffd700;
+            background: rgba(212, 175, 55, 0.18);
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
+        }
+
+        .tracker-icon-slot.completed img {
+            opacity: 1;
+            filter: grayscale(0%) drop-shadow(0 0 4px #ffd700);
+        }
+
+        .tracker-icon-slot .check-badge {
+            position: absolute;
+            bottom: -3px;
+            right: -3px;
+            background: #2e7d32;
+            color: #ffffff;
+            font-size: 0.65rem;
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transform: scale(0);
+            transition: all 0.3s ease;
+        }
+
+        .tracker-icon-slot.completed .check-badge {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* Castle Scene & Background */
+        .scene-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+        }
+
+        .castle-bg {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        /* ================================================== */
+        /* HIDDEN TREASURES PLACEMENT                         */
+        /* ================================================== */
+        .treasure-item {
+            position: absolute;
+            transform: translate(-50%, -50%);
+            cursor: pointer;
+            z-index: 20;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 12px;
+            transition: transform 0.2s ease, filter 0.3s ease;
+        }
+
+        .treasure-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+            pointer-events: none;
+            filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.6));
+            transition: all 0.3s ease;
+        }
+
+        .treasure-item:active {
+            transform: translate(-50%, -50%) scale(1.15);
+        }
+
+        /* Discovery Animation Glow */
+        @keyframes treasureDiscover {
+            0% { transform: translate(-50%, -50%) scale(1); filter: drop-shadow(0 0 0px #ffd700); }
+            50% { transform: translate(-50%, -50%) scale(1.35); filter: drop-shadow(0 0 20px #ffd700); }
+            100% { transform: translate(-50%, -50%) scale(1.1); filter: drop-shadow(0 0 10px #ffd700); }
+        }
+
+        .treasure-item.discovering {
+            animation: treasureDiscover 0.6s ease forwards;
+        }
+
+        /* Disappearance Animation on Successful Collection */
+        @keyframes treasureDisappear {
+            0% {
+                transform: translate(-50%, -50%) scale(1);
+                filter: drop-shadow(0 0 10px #ffd700);
+                opacity: 1;
+            }
+            40% {
+                transform: translate(-50%, -50%) scale(1.35);
+                filter: drop-shadow(0 0 25px #ffd700);
+                opacity: 0.9;
+            }
+            100% {
+                transform: translate(-50%, -50%) scale(0.1);
+                filter: drop-shadow(0 0 0px #ffd700);
+                opacity: 0;
+            }
+        }
+
+        .treasure-item.disappearing {
+            animation: treasureDisappear 0.6s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+            pointer-events: none;
+        }
+
+        /* ================================================== */
+        /* QUESTION SYSTEM UI                                 */
+        /* ================================================== */
+        #questionOverlay {
+            z-index: 110;
+        }
+
+        .question-card {
+            position: relative;
+            width: 100%;
+            max-width: 420px;
+            background: linear-gradient(135deg, #121826 0%, #0a0e17 100%);
+            border: 2px solid #c5a059;
+            border-radius: 14px;
+            padding: 24px 20px;
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.9), inset 0 0 15px rgba(0, 0, 0, 0.8), 0 0 20px rgba(197, 160, 89, 0.15);
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        .question-badge {
+            display: inline-block;
+            background: rgba(197, 160, 89, 0.2);
+            color: #d4af37;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-bottom: 12px;
+            border: 1px solid rgba(197, 160, 89, 0.4);
+        }
+
+        .question-text {
+            font-size: 1.02rem;
+            color: #f0e6d2;
+            line-height: 1.55;
+            margin-bottom: 20px;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+            white-space: pre-line;
+        }
+
+        .options-container {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+
+        .option-btn {
+            position: relative;
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(197, 160, 89, 0.3);
+            border-radius: 8px;
+            color: #e0e6ed;
+            font-size: 0.95rem;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            min-height: 48px;
+        }
+
+        .option-btn:hover {
+            background: rgba(197, 160, 89, 0.12);
+            border-color: #d4af37;
+        }
+
+        .option-btn:active {
+            transform: scale(0.98);
+        }
+
+        .option-prefix {
+            font-weight: bold;
+            color: #d4af37;
+            margin-right: 10px;
+            flex-shrink: 0;
+        }
+
+        /* Shake animation for wrong answer */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+
+        .option-btn.wrong {
+            animation: shake 0.4s ease;
+            background: rgba(139, 0, 0, 0.35) !important;
+            border-color: #ff4d4d !important;
+            color: #ffcccc !important;
+        }
+
+        .option-btn.correct {
+            background: rgba(46, 125, 50, 0.45) !important;
+            border-color: #ffd700 !important;
+            color: #ffffff !important;
+            box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+        }
+
+        .feedback-msg {
+            min-height: 24px;
+            font-size: 0.9rem;
+            font-weight: bold;
+            text-align: center;
+            transition: all 0.3s ease;
+        }
+
+        .feedback-msg.wrong-text { color: #ff6b6b; }
+        .feedback-msg.correct-text { color: #ffd700; }
+
+        #completionOverlay {
+            z-index: 115;
+        }
+
+        /* Canvas Overlay for Particles */
+        #particleCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 70;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-wrapper">
+        <!-- Canvas for particle visual effects -->
+        <canvas id="particleCanvas"></canvas>
+
+        <!-- LEVEL 4 TITLE SCREEN OVERLAY -->
+        <div class="title-screen-overlay" id="titleScreenOverlay">
+            <div class="title-card">
+                <div class="title-badge">LEVEL 4</div>
+                <h1 class="main-title">失落的王室宝藏</h1>
+                <div class="royal-divider">◆ ❖ ◆</div>
+                <p class="title-desc">
+                    尘封的城堡中，<br>
+                    隐藏着五件失落已久的王室宝物……
+                </p>
+                <button class="enter-castle-btn" id="enterCastleBtn">进入城堡</button>
+            </div>
+        </div>
+
+        <!-- OPENING VIDEO SECTION -->
+        <div class="video-overlay" id="videoOverlay">
+            <video id="introVideo" playsinline webkit-playsinline preload="auto">
+                <source src="level4_intro.mp4" type="video/mp4">
+            </video>
+            
+            <!-- Castle Video Loading Overlay -->
+            <div class="video-loading-overlay" id="videoLoadingOverlay">
+                <div class="castle-loader-ring"></div>
+                <div class="loading-text" id="videoLoadingText">正在开启城堡……</div>
+                <button class="retry-loading-btn" id="retryLoadingBtn">重试</button>
+            </div>
+
+            <button class="video-fallback-btn" id="videoFallbackBtn">点击播放</button>
+        </div>
+
+        <!-- MISSION PARCHMENT SECTION -->
+        <div class="modal-overlay" id="missionOverlay">
+            <div class="parchment-card">
+                <div class="parchment-title-badge">LEVEL 4</div>
+                <h1 class="parchment-title">失落的王室宝藏</h1>
+                <p class="parchment-body">
+                    城堡中藏着 5 件王室宝物。<br><br>
+                    找到它们，并回答每件宝物守护的问题。<br><br>
+                    找齐所有宝物并完成所有挑战，<br>
+                    即可完成任务！
+                </p>
+                <button class="medieval-btn" id="startHuntBtn">开始寻宝</button>
+            </div>
+        </div>
+
+        <!-- MAIN HIDDEN-OBJECT GAME SCENE -->
+        <div class="game-container">
+            <!-- Top Tracker Bar -->
+            <div class="top-tracker-bar">
+                <div class="tracker-header">
+                    <span>LEVEL 4 ｜ 王室寻宝</span>
+                    <span class="tracker-count" id="trackerCountText">已完成 0 / 5</span>
+                </div>
+                <div class="tracker-icons">
+                    <div class="tracker-icon-slot" id="slot-1">
+                        <img src="lvl4_1.png" alt="Royal Crest">
+                        <div class="check-badge">✓</div>
+                    </div>
+                    <div class="tracker-icon-slot" id="slot-2">
+                        <img src="lvl4_2.png" alt="Blue Sapphire">
+                        <div class="check-badge">✓</div>
+                    </div>
+                    <div class="tracker-icon-slot" id="slot-3">
+                        <img src="lvl4_3.png" alt="Feather Quill">
+                        <div class="check-badge">✓</div>
+                    </div>
+                    <div class="tracker-icon-slot" id="slot-4">
+                        <img src="lvl4_4.png" alt="Golden Key">
+                        <div class="check-badge">✓</div>
+                    </div>
+                    <div class="tracker-icon-slot" id="slot-5">
+                        <img src="lvl4_5.png" alt="Ancient Scroll">
+                        <div class="check-badge">✓</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Castle Scene & Hidden Treasure Layer -->
+            <div class="scene-container" id="sceneContainer">
+                <img src="level4_bg.png" alt="Castle Study" class="castle-bg">
+                <!-- Treasures are injected dynamically via JavaScript -->
+            </div>
+        </div>
+
+        <!-- QUESTION PANEL OVERLAY -->
+        <div class="modal-overlay" id="questionOverlay">
+            <div class="question-card">
+                <div class="question-badge">宝物挑战</div>
+                <div class="question-text" id="questionText">Question goes here...</div>
+                <div class="options-container" id="optionsContainer">
+                    <!-- Option buttons generated dynamically -->
+                </div>
+                <div class="feedback-msg" id="feedbackMsg"></div>
+            </div>
+        </div>
+
+        <!-- LEVEL COMPLETION PARCHMENT -->
+        <div class="modal-overlay" id="completionOverlay">
+            <div class="parchment-card">
+                <div class="parchment-title-badge">LEVEL 4 COMPLETE</div>
+                <h1 class="parchment-title">寻宝任务完成！</h1>
+                <p class="parchment-body">
+                    你成功找到了所有王室宝物，<br>
+                    并完成了所有挑战。
+                </p>
+                <button class="medieval-btn" id="finishMissionBtn">完成任务</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ================================================== */
+        /* LEVEL 4 AUDIO SYSTEM CONFIGURATION                 */
+        /* ================================================== */
+        const level4Audio = {
+            enter: new Audio('level4_enter.mp3'),
+            discover: new Audio('level4_discover.mp3'),
+            correct: new Audio('level4_correct-answer.wav'),
+            wrong: new Audio('wrong.wav'),
+            collect: new Audio('level4_collect.mp3'),
+            complete: new Audio('game-level-completed.wav'),
+            bgm: new Audio('level4_bgm.mp3')
+        };
+
+        level4Audio.enter.preload = 'auto';
+        level4Audio.enter.volume = 0.65;
+
+        level4Audio.discover.preload = 'auto';
+        level4Audio.discover.volume = 0.60;
+
+        level4Audio.correct.preload = 'auto';
+        level4Audio.correct.volume = 0.70;
+
+        level4Audio.wrong.preload = 'auto';
+        level4Audio.wrong.volume = 0.55;
+
+        level4Audio.collect.preload = 'auto';
+        level4Audio.collect.volume = 0.65;
+
+        level4Audio.complete.preload = 'auto';
+        level4Audio.complete.volume = 0.75;
+
+        level4Audio.bgm.preload = 'auto';
+        level4Audio.bgm.volume = 0.18;
+        level4Audio.bgm.loop = true;
+
+        function playSFX(audio) {
+            if (!audio) return;
+            try {
+                audio.currentTime = 0;
+                const playPromise = audio.play();
+                if (playPromise !== undefined) {
+                    playPromise.catch(err => console.warn('SFX playback prevented:', err));
+                }
+            } catch (err) {
+                console.warn('Audio playback error:', err);
+            }
+        }
+
+        let bgmFadeInterval = null;
+
+        function fadeInBGM(targetVolume = 0.18, duration = 1200) {
+            if (bgmFadeInterval) clearInterval(bgmFadeInterval);
+            level4Audio.bgm.volume = 0;
+
+            const playPromise = level4Audio.bgm.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    const startTime = performance.now();
+                    bgmFadeInterval = setInterval(() => {
+                        const elapsed = performance.now() - startTime;
+                        const progress = Math.min(elapsed / duration, 1);
+                        level4Audio.bgm.volume = progress * targetVolume;
+                        if (progress >= 1) {
+                            clearInterval(bgmFadeInterval);
+                            bgmFadeInterval = null;
+                        }
+                    }, 30);
+                }).catch(err => {
+                    console.warn('BGM play error:', err);
+                });
+            }
+        }
+
+        function fadeOutBGM(duration = 800) {
+            return new Promise((resolve) => {
+                if (bgmFadeInterval) clearInterval(bgmFadeInterval);
+                const startVolume = level4Audio.bgm.volume;
+                const startTime = performance.now();
+
+                bgmFadeInterval = setInterval(() => {
+                    const elapsed = performance.now() - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    level4Audio.bgm.volume = Math.max(0, startVolume * (1 - progress));
+
+                    if (progress >= 1) {
+                        clearInterval(bgmFadeInterval);
+                        bgmFadeInterval = null;
+                        level4Audio.bgm.pause();
+                        resolve();
+                    }
+                }, 30);
+            });
+        }
+
+        /* ================================================== */
+        /* SHARED GAME PROGRESSION ENGINE                     */
+        /* ================================================== */
+        const GameProgression = {
+            STORAGE_KEY: 'game_level_progression_v1',
+
+            getProgress() {
+                try {
+                    const saved = localStorage.getItem(this.STORAGE_KEY);
+                    if (saved) {
+                        return JSON.parse(saved);
+                    }
+                } catch (e) {
+                    console.error("Local storage read error", e);
+                }
+                return this.getInitialState();
+            },
+
+            getInitialState() {
+                return {
+                    levels: {
+                        1: { unlocked: true, completed: false, stars: 0, score: 0 }
+                    },
+                    achievements: [],
+                    stats: {
+                        totalScore: 0,
+                        levelsCompleted: 0
+                    }
+                };
+            },
+
+            save(progress) {
+                try {
+                    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(progress));
+                } catch (e) {
+                    console.error("Local storage save error", e);
+                }
+            },
+
+            completeLevel(levelId, data = {}) {
+                const id = parseInt(levelId);
+                const progress = this.getProgress();
+
+                if (!progress.levels[id]) {
+                    progress.levels[id] = {};
+                }
+                progress.levels[id].completed = true;
+                progress.levels[id].unlocked = true;
+
+                if (data.stars !== undefined) progress.levels[id].stars = data.stars;
+                if (data.score !== undefined) progress.levels[id].score = data.score;
+
+                const nextId = id + 1;
+                if (nextId <= 9) {
+                    if (!progress.levels[nextId]) {
+                        progress.levels[nextId] = {};
+                    }
+                    progress.levels[nextId].unlocked = true;
+                }
+
+                let totalScore = 0;
+                let completedCount = 0;
+                Object.keys(progress.levels).forEach(k => {
+                    const lvl = progress.levels[k];
+                    if (lvl.completed) completedCount++;
+                    if (lvl.score) totalScore += lvl.score;
+                });
+                progress.stats.totalScore = totalScore;
+                progress.stats.levelsCompleted = completedCount;
+
+                this.save(progress);
+                return progress;
+            }
+        };
+
+        /* ================================================== */
+        /* TREASURE CONFIG                                   */
+        /* ================================================== */
+        const treasures = [
+            {
+                id: 1,
+                image: "lvl4_1.png",
+                name: "Royal Crest",
+                x: 49.5,
+                y: 35.5,
+                width: 10,
+                question: "Siapakah Perdana Menteri Malaysia yang terpilih sebagai Ketua Jawatankuasa Antidadah Antarabangsa pada tahun 1988?",
+                options: [
+                    { key: "A", text: "Tunku Abdul Rahman Putra al-Haj" },
+                    { key: "B", text: "Tun Abdul Razak Hussein" },
+                    { key: "C", text: "Tun Hussein Onn" },
+                    { key: "D", text: "Tun Dr. Mahathir Mohamad" }
+                ],
+                correctAnswer: "D"
+            },
+            {
+                id: 2,
+                image: "lvl4_2.png",
+                name: "Blue Sapphire",
+                x: 68.0,
+                y: 60.5,
+                width: 7.5,
+                question: "Apakah alasan American Soybean Association (ASA) menjalankan kempen antiminyak sawit?",
+                options: [
+                    { key: "A", text: "Minyak sawit menjejaskan penjualan minyak kacang soya" },
+                    { key: "B", text: "Minyak sawit menyebabkan penyakit berjangkit" },
+                    { key: "C", text: "Minyak sawit tidak boleh dieksport" },
+                    { key: "D", text: "Minyak sawit mengancam keselamatan negara" }
+                ],
+                correctAnswer: "A"
+            },
+            {
+                id: 3,
+                image: "lvl4_3.png",
+                name: "Red Feather Quill",
+                x: 35.0,
+                y: 68.0,
+                width: 8.5,
+                question: "Apakah pengiktirafan yang diberikan WHO kepada Malaysia pada tahun 2018?",
+                options: [
+                    { key: "A", text: "Negara pertama bebas dadah" },
+                    { key: "B", text: "Negara Asia yang berjaya mengurangkan penularan wabak daripada ibu kepada anak" },
+                    { key: "C", text: "Negara pertama bebas penyakit" },
+                    { key: "D", text: "Negara pengeluar ubat terbesar" }
+                ],
+                correctAnswer: "B"
+            },
+            {
+                id: 4,
+                image: "lvl4_4.png",
+                name: "Golden Key",
+                x: 23.5,
+                y: 77.0,
+                width: 8.0,
+                question: "Apakah pelan yang didesak supaya Malaysia menggunakannya bagi menangani kemelesetan ekonomi?",
+                options: [
+                    { key: "A", text: "AFTA" },
+                    { key: "B", text: "IMF" },
+                    { key: "C", text: "ASEAN" },
+                    { key: "D", text: "OIC" }
+                ],
+                correctAnswer: "B"
+            },
+            {
+                id: 5,
+                image: "lvl4_5.png",
+                name: "Ancient Scroll",
+                x: 77.5,
+                y: 47.0,
+                width: 10.5,
+                question: "Pada kadar berapakah Malaysia menambat kadar pertukaran ringgit kepada dolar Amerika Syarikat?",
+                options: [
+                    { key: "A", text: "RM2.80 bagi USD1" },
+                    { key: "B", text: "RM3.00 bagi USD1" },
+                    { key: "C", text: "RM3.80 bagi USD1" },
+                    { key: "D", text: "RM4.80 bagi USD1" }
+                ],
+                correctAnswer: "C"
+            }
+        ];
+
+        /* Game State Variables */
+        let completedTreasures = new Set();
+        let currentActiveTreasure = null;
+        let isProcessingAnswer = false;
+        let isGameInteractive = false;
+        let levelCompleteSoundPlayed = false;
+
+        /* Canvas Particles System */
+        const canvas = document.getElementById('particleCanvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function createSparkles(x, y, count = 25) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 3 + 1;
+                particles.push({
+                    x: x,
+                    y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    size: Math.random() * 4 + 2,
+                    alpha: 1,
+                    color: ['#ffd700', '#fff8e7', '#c5a059'][Math.floor(Math.random() * 3)]
+                });
+            }
+        }
+
+        function animateParticles() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.alpha -= 0.02;
+                p.size = Math.max(0, p.size - 0.05);
+
+                if (p.alpha <= 0) {
+                    particles.splice(i, 1);
+                    continue;
+                }
+
+                ctx.save();
+                ctx.globalAlpha = p.alpha;
+                ctx.fillStyle = p.color;
+                ctx.shadowBlur = 8;
+                ctx.shadowColor = '#ffd700';
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+            requestAnimationFrame(animateParticles);
+        }
+        animateParticles();
+
+        /* ================================================== */
+        /* OPENING FLOW & BUFFERING SYSTEM                   */
+        /* ================================================== */
+        const titleScreenOverlay = document.getElementById('titleScreenOverlay');
+        const enterCastleBtn = document.getElementById('enterCastleBtn');
+        const videoOverlay = document.getElementById('videoOverlay');
+        const introVideo = document.getElementById('introVideo');
+        const videoFallbackBtn = document.getElementById('videoFallbackBtn');
+        const missionOverlay = document.getElementById('missionOverlay');
+
+        const videoLoadingOverlay = document.getElementById('videoLoadingOverlay');
+        const videoLoadingText = document.getElementById('videoLoadingText');
+        const retryLoadingBtn = document.getElementById('retryLoadingBtn');
+
+        let videoStartRequested = false;
+        let isVideoStarted = false;
+        let bufferingTimer = null;
+        let loadingTimeoutTimer = null;
+
+        function isVideoReady() {
+            if (!introVideo) return false;
+            if (introVideo.readyState >= 3) return true;
+
+            try {
+                if (introVideo.buffered && introVideo.buffered.length > 0) {
+                    const bufferedEnd = introVideo.buffered.end(introVideo.buffered.length - 1);
+                    const duration = introVideo.duration || 0;
+                    if (bufferedEnd - introVideo.currentTime >= 2.0 || (duration > 0 && bufferedEnd >= duration - 0.2)) {
+                        return true;
+                    }
+                }
+            } catch (e) {}
+
+            return false;
+        }
+
+        function showVideoLoadingUI(msg = "正在开启城堡……", showRetry = false) {
+            if (videoLoadingText) videoLoadingText.textContent = msg;
+            if (retryLoadingBtn) retryLoadingBtn.style.display = showRetry ? 'block' : 'none';
+            if (videoLoadingOverlay) videoLoadingOverlay.classList.add('active');
+        }
+
+        function hideVideoLoadingUI() {
+            if (videoLoadingOverlay) videoLoadingOverlay.classList.remove('active');
+        }
+
+        function startVideoPlayback() {
+            if (isVideoStarted) return;
+            isVideoStarted = true;
+
+            if (loadingTimeoutTimer) {
+                clearTimeout(loadingTimeoutTimer);
+                loadingTimeoutTimer = null;
+            }
+
+            hideVideoLoadingUI();
+
+            introVideo.currentTime = 0;
+            introVideo.muted = false;
+
+            const playPromise = introVideo.play();
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    videoFallbackBtn.style.display = 'none';
+                }).catch((error) => {
+                    console.warn("Audio playback blocked by policy, trying muted fallback:", error);
+                    introVideo.muted = true;
+                    introVideo.play().then(() => {
+                        videoFallbackBtn.style.display = 'none';
+                    }).catch(() => {
+                        videoFallbackBtn.style.display = 'block';
+                    });
+                });
+            }
+        }
+
+        function checkAndStartVideo() {
+            if (isVideoReady()) {
+                startVideoPlayback();
+            } else {
+                showVideoLoadingUI("正在开启城堡……", false);
+
+                if (!loadingTimeoutTimer) {
+                    loadingTimeoutTimer = setTimeout(() => {
+                        if (!isVideoStarted) {
+                            showVideoLoadingUI("网络连接较慢", true);
+                        }
+                    }, 12000);
+                }
+            }
+        }
+
+        ['canplay', 'canplaythrough', 'loadeddata', 'progress'].forEach(evt => {
+            introVideo.addEventListener(evt, () => {
+                if (videoStartRequested && !isVideoStarted) {
+                    if (isVideoReady()) {
+                        startVideoPlayback();
+                    }
+                }
+            });
+        });
+
+        introVideo.addEventListener('waiting', () => {
+            if (!isVideoStarted) return;
+            if (bufferingTimer) clearTimeout(bufferingTimer);
+            bufferingTimer = setTimeout(() => {
+                showVideoLoadingUI("正在加载城堡场景……", false);
+            }, 250);
+        });
+
+        introVideo.addEventListener('stalled', () => {
+            if (!isVideoStarted) return;
+            if (bufferingTimer) clearTimeout(bufferingTimer);
+            bufferingTimer = setTimeout(() => {
+                showVideoLoadingUI("正在加载城堡场景……", false);
+            }, 250);
+        });
+
+        introVideo.addEventListener('playing', () => {
+            if (bufferingTimer) {
+                clearTimeout(bufferingTimer);
+                bufferingTimer = null;
+            }
+            hideVideoLoadingUI();
+        });
+
+        introVideo.addEventListener('timeupdate', () => {
+            if (bufferingTimer && !introVideo.paused) {
+                clearTimeout(bufferingTimer);
+                bufferingTimer = null;
+                hideVideoLoadingUI();
+            }
+        });
+
+        introVideo.addEventListener('error', () => {
+            console.warn("Video load error detected.");
+            showVideoLoadingUI("无法加载城堡动画", true);
+        });
+
+        retryLoadingBtn.addEventListener('click', () => {
+            showVideoLoadingUI("正在重新加载……", false);
+            introVideo.load();
+            setTimeout(() => {
+                if (isVideoReady()) {
+                    startVideoPlayback();
+                }
+            }, 800);
+        });
+
+        enterCastleBtn.addEventListener('click', () => {
+            if (videoStartRequested) return;
+            videoStartRequested = true;
+
+            playSFX(level4Audio.enter);
+
+            titleScreenOverlay.style.opacity = '0';
+            videoOverlay.classList.add('active');
+
+            setTimeout(() => {
+                titleScreenOverlay.style.display = 'none';
+            }, 600);
+
+            checkAndStartVideo();
+        });
+
+        videoFallbackBtn.addEventListener('click', () => {
+            videoFallbackBtn.style.display = 'none';
+            introVideo.muted = false;
+            introVideo.play().catch(() => {
+                introVideo.muted = true;
+                introVideo.play();
+            });
+        });
+
+        introVideo.addEventListener('ended', () => {
+            hideVideoLoadingUI();
+            introVideo.pause();
+            showMissionParchment();
+        });
+
+        function showMissionParchment() {
+            missionOverlay.classList.add('active');
+        }
+
+        document.getElementById('startHuntBtn').addEventListener('click', () => {
+            playSFX(level4Audio.enter);
+
+            missionOverlay.style.opacity = '0';
+            videoOverlay.style.opacity = '0';
+
+            fadeInBGM(0.18, 1200);
+
+            setTimeout(() => {
+                missionOverlay.classList.remove('active');
+                missionOverlay.style.display = 'none';
+                videoOverlay.classList.remove('active');
+                videoOverlay.style.display = 'none';
+
+                isGameInteractive = true;
+            }, 600);
+        });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            renderTreasures();
+            try {
+                introVideo.load();
+            } catch (e) {}
+        });
+
+        /* ================================================== */
+        /* MAIN GAME & TREASURE RENDERING                     */
+        /* ================================================== */
+        function renderTreasures() {
+            const sceneContainer = document.getElementById('sceneContainer');
+
+            treasures.forEach(item => {
+                const el = document.createElement('div');
+                el.className = 'treasure-item';
+                el.id = `treasure-${item.id}`;
+                el.style.left = `${item.x}%`;
+                el.style.top = `${item.y}%`;
+                el.style.width = `${item.width}%`;
+
+                const img = document.createElement('img');
+                img.src = item.image;
+                img.alt = item.name;
+
+                el.appendChild(img);
+
+                el.addEventListener('click', (e) => {
+                    if (!isGameInteractive || completedTreasures.has(item.id)) return;
+                    handleTreasureClick(item, el, e);
+                });
+
+                sceneContainer.appendChild(el);
+            });
+        }
+
+        /* ================================================== */
+        /* TREASURE INTERACTION                               */
+        /* ================================================== */
+        function handleTreasureClick(item, element, event) {
+            playSFX(level4Audio.discover);
+
+            currentActiveTreasure = item;
+            element.classList.add('discovering');
+
+            const rect = element.getBoundingClientRect();
+            const canvasRect = canvas.getBoundingClientRect();
+            createSparkles(rect.left + rect.width / 2 - canvasRect.left, rect.top + rect.height / 2 - canvasRect.top, 30);
+
+            setTimeout(() => {
+                element.classList.remove('discovering');
+                openQuestionPanel(item);
+            }, 550);
+        }
+
+        /* ================================================== */
+        /* QUESTION SYSTEM & INTERACTION                     */
+        /* ================================================== */
+        const questionOverlay = document.getElementById('questionOverlay');
+        const questionTextEl = document.getElementById('questionText');
+        const optionsContainer = document.getElementById('optionsContainer');
+        const feedbackMsg = document.getElementById('feedbackMsg');
+
+        function openQuestionPanel(item) {
+            questionTextEl.textContent = item.question;
+            optionsContainer.innerHTML = '';
+            feedbackMsg.textContent = '';
+            feedbackMsg.className = 'feedback-msg';
+            isProcessingAnswer = false;
+
+            item.options.forEach(opt => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.dataset.key = opt.key;
+
+                const prefix = document.createElement('span');
+                prefix.className = 'option-prefix';
+                prefix.textContent = `${opt.key}.`;
+
+                const text = document.createElement('span');
+                text.textContent = opt.text;
+
+                btn.appendChild(prefix);
+                btn.appendChild(text);
+
+                btn.addEventListener('click', () => {
+                    if (isProcessingAnswer) return;
+                    validateAnswer(opt.key, btn, item);
+                });
+
+                optionsContainer.appendChild(btn);
+            });
+
+            questionOverlay.classList.add('active');
+        }
+
+        /* ================================================== */
+        /* ANSWER VALIDATION LOGIC                            */
+        /* ================================================== */
+        function validateAnswer(selectedKey, buttonEl, item) {
+            if (selectedKey === item.correctAnswer) {
+                // Correct Answer Logic
+                isProcessingAnswer = true;
+                buttonEl.classList.add('correct');
+                feedbackMsg.textContent = "挑战成功！";
+                feedbackMsg.className = "feedback-msg correct-text";
+
+                playSFX(level4Audio.correct);
+
+                const rect = buttonEl.getBoundingClientRect();
+                const canvasRect = canvas.getBoundingClientRect();
+                createSparkles(rect.left + rect.width / 2 - canvasRect.left, rect.top + rect.height / 2 - canvasRect.top, 20);
+
+                setTimeout(() => {
+                    questionOverlay.classList.remove('active');
+                    markTreasureCompleted(item.id);
+                }, 1000);
+
+            } else {
+                // Wrong Answer Logic
+                buttonEl.classList.add('wrong');
+                feedbackMsg.textContent = "答案不正确，再试一次。";
+                feedbackMsg.className = "feedback-msg wrong-text";
+
+                playSFX(level4Audio.wrong);
+
+                setTimeout(() => {
+                    buttonEl.classList.remove('wrong');
+                }, 500);
+            }
+        }
+
+        /* COMPLETED TREASURE DISAPPEARS FROM SCENE */
+        function markTreasureCompleted(id) {
+            completedTreasures.add(id);
+
+            playSFX(level4Audio.collect);
+
+            const treasureEl = document.getElementById(`treasure-${id}`);
+            if (treasureEl) {
+                treasureEl.classList.add('disappearing');
+                setTimeout(() => {
+                    treasureEl.style.display = 'none';
+                }, 600);
+            }
+
+            const slotEl = document.getElementById(`slot-${id}`);
+            if (slotEl) {
+                slotEl.classList.add('completed');
+            }
+
+            document.getElementById('trackerCountText').textContent = `已完成 ${completedTreasures.size} / 5`;
+
+            if (completedTreasures.size === 5) {
+                setTimeout(() => {
+                    triggerLevelCompletion();
+                }, 800);
+            }
+        }
+
+        /* ================================================== */
+        /* LEVEL COMPLETION HANDLER                           */
+        /* ================================================== */
+        function triggerLevelCompletion() {
+            fadeOutBGM(800).then(() => {
+                if (!levelCompleteSoundPlayed) {
+                    levelCompleteSoundPlayed = true;
+                    playSFX(level4Audio.complete);
+                }
+            });
+
+            const w = canvas.width;
+            const h = canvas.height;
+            createSparkles(w * 0.3, h * 0.4, 40);
+            createSparkles(w * 0.7, h * 0.4, 40);
+            createSparkles(w * 0.5, h * 0.3, 50);
+
+            const completionOverlay = document.getElementById('completionOverlay');
+            completionOverlay.classList.add('active');
+        }
+
+        /* ================================================== */
+        /* SAVE PROGRESSION (UNLOCK LEVEL 5) & RETURN          */
+        /* ================================================== */
+        document.getElementById('finishMissionBtn').addEventListener('click', () => {
+            saveGameProgress();
+            window.location.href = 'index.html';
+        });
+
+        function saveGameProgress() {
+            try {
+                GameProgression.completeLevel(4);
+
+                localStorage.setItem('level4Completed', 'true');
+                localStorage.setItem('level_4_completed', 'true');
+                localStorage.setItem('level4_completed', 'true');
+                localStorage.setItem('level4_complete', 'true');
+
+                let currentUnlocked = parseInt(localStorage.getItem('unlockedLevel') || '1');
+                if (currentUnlocked < 5) {
+                    localStorage.setItem('unlockedLevel', '5');
+                }
+
+                let currentMaxUnlocked = parseInt(localStorage.getItem('maxUnlockedLevel') || '1');
+                if (currentMaxUnlocked < 5) {
+                    localStorage.setItem('maxUnlockedLevel', '5');
+                }
+
+                let completedList = [];
+                try {
+                    completedList = JSON.parse(localStorage.getItem('completedLevels') || '[]');
+                } catch (e) { completedList = []; }
+
+                if (!completedList.includes(4)) {
+                    completedList.push(4);
+                    localStorage.setItem('completedLevels', JSON.stringify(completedList));
+                }
+
+            } catch (err) {
+                console.warn('LocalStorage save error:', err);
+            }
+        }
+
+        /* Clean audio pause on page unload */
+        window.addEventListener('pagehide', () => {
+            if (level4Audio.bgm) {
+                level4Audio.bgm.pause();
+            }
+        });
+        window.addEventListener('beforeunload', () => {
+            if (level4Audio.bgm) {
+                level4Audio.bgm.pause();
+            }
+        });
+    </script>
+</body>
+</html>

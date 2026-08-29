@@ -1,0 +1,1216 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0">
+    <title>Level 2 - 水果忍者 · 历史挑战</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+
+        body {
+            background: #111827;
+            background-image: radial-gradient(#2d124d 0%, #0d0618 100%);
+            color: #ffffff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            min-height: 100dvh;
+            overflow: hidden;
+        }
+
+        /* Phone frame container */
+        .game-wrapper {
+            position: relative;
+            width: 100%;
+            max-width: 440px;
+            height: 100vh;
+            height: 100dvh;
+            max-height: 900px;
+            background: linear-gradient(180deg, #2a1147 0%, #150a2c 100%);
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.8), 0 0 0 2px rgba(255, 215, 0, 0.2);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            border-radius: 0;
+        }
+
+        @media (min-height: 600px) and (min-width: 450px) {
+            .game-wrapper {
+                border-radius: 24px;
+                height: 94vh;
+            }
+        }
+
+        /* Screen Shake effect */
+        .shake {
+            animation: shakeAnim 0.4s cubic-bezier(.36,.07,.19,.97) both;
+        }
+
+        @keyframes shakeAnim {
+            10%, 90% { transform: translate3d(-4px, 2px, 0); }
+            20%, 80% { transform: translate3d(6px, -4px, 0); }
+            30%, 50%, 70% { transform: translate3d(-8px, 6px, 0); }
+            40%, 60% { transform: translate3d(8px, -6px, 0); }
+        }
+
+        /* HUD Section */
+        .hud {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px 8px;
+            background: rgba(18, 9, 36, 0.7);
+            backdrop-filter: blur(8px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 10;
+        }
+
+        .hud-item {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            font-weight: 800;
+            font-size: 0.95rem;
+            color: #ffd700;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .lives {
+            font-size: 1.2rem;
+            letter-spacing: 2px;
+        }
+
+        .q-badge {
+            background: linear-gradient(135deg, #ff7e5f, #feb47b);
+            color: #fff;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        /* Question Box */
+        .question-container {
+            padding: 10px 14px;
+            background: rgba(35, 18, 64, 0.85);
+            border-bottom: 2px solid rgba(255, 215, 0, 0.3);
+            z-index: 10;
+            flex-shrink: 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .question-text {
+            font-size: 0.92rem;
+            font-weight: 700;
+            color: #ffffff;
+            line-height: 1.35;
+            margin-bottom: 8px;
+            text-align: left;
+            white-space: pre-line;
+        }
+
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 6px;
+        }
+
+        .option-card {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            padding: 5px 8px;
+            font-size: 0.78rem;
+            color: #e2e8f0;
+            display: flex;
+            align-items: center;
+            line-height: 1.2;
+            pointer-events: none; /* Reading only! */
+        }
+
+        .option-badge {
+            background: #ffd700;
+            color: #111;
+            font-weight: 900;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 6px;
+            flex-shrink: 0;
+            font-size: 0.75rem;
+        }
+
+        /* Interactive Canvas Area */
+        .game-canvas-container {
+            position: relative;
+            flex: 1;
+            width: 100%;
+            overflow: hidden;
+            cursor: crosshair;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Floating Overlay Cards */
+        .overlay-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(13, 6, 24, 0.88);
+            backdrop-filter: blur(10px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 24px;
+            z-index: 100;
+            text-align: center;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+
+        .overlay-screen.hidden {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+
+        /* Level 2 Intro Screen */
+        .intro-title {
+            font-size: 3rem;
+            font-weight: 900;
+            color: #ffd700;
+            text-shadow: 0 0 20px rgba(255, 215, 0, 0.6), 0 4px 10px rgba(0,0,0,0.8);
+            letter-spacing: 2px;
+            animation: popIn 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        .intro-sub {
+            font-size: 1.2rem;
+            color: #a7f3d0;
+            margin-top: 10px;
+            font-weight: 700;
+        }
+
+        /* Instruction Card */
+        .card-box {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 215, 0, 0.4);
+            border-radius: 20px;
+            padding: 24px;
+            max-width: 320px;
+            width: 100%;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6);
+        }
+
+        .card-title {
+            color: #ffd700;
+            font-size: 1.8rem;
+            margin-bottom: 12px;
+            font-weight: 900;
+        }
+
+        .instruction-list {
+            text-align: left;
+            font-size: 0.95rem;
+            color: #cbd5e1;
+            margin: 16px 0;
+            line-height: 1.6;
+        }
+
+        .instruction-list li {
+            list-style: none;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            display: inline-block;
+            background: linear-gradient(135deg, #ff9f43 0%, #ff5252 100%);
+            color: #ffffff;
+            font-weight: 900;
+            font-size: 1.2rem;
+            padding: 14px 36px;
+            border-radius: 30px;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(255, 82, 82, 0.5);
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+            text-decoration: none;
+            margin-top: 10px;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.95);
+            box-shadow: 0 2px 10px rgba(255, 82, 82, 0.4);
+        }
+
+        /* Feedback Popups */
+        .feedback-banner {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.5);
+            padding: 12px 28px;
+            border-radius: 40px;
+            font-size: 1.8rem;
+            font-weight: 900;
+            color: #fff;
+            z-index: 50;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+        }
+
+        .feedback-banner.correct {
+            background: linear-gradient(135deg, #10b981, #059669);
+            border: 2px solid #a7f3d0;
+        }
+
+        .feedback-banner.wrong {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            border: 2px solid #fde68a;
+        }
+
+        .feedback-banner.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1.1);
+        }
+
+        /* Decorative Bouncing Fruit Icons */
+        .floating-fruit {
+            font-size: 2.2rem;
+            display: inline-block;
+            animation: floatBounce 2s infinite ease-in-out alternate;
+        }
+
+        @keyframes floatBounce {
+            0% { transform: translateY(0) rotate(0deg); }
+            100% { transform: translateY(-12px) rotate(15deg); }
+        }
+
+        @keyframes popIn {
+            0% { transform: scale(0.2); opacity: 0; }
+            80% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-wrapper" id="gameWrapper">
+        <!-- HUD Header -->
+        <div class="hud">
+            <div class="hud-item lives" id="livesDisplay">❤️ ❤️ ❤️</div>
+            <div class="hud-item">
+                <span class="q-badge" id="qProgress">第 1 / 5 题</span>
+            </div>
+            <div class="hud-item" style="color: #4ade80;" id="scoreDisplay">分数：0</div>
+        </div>
+
+        <!-- Question & Options Header -->
+        <div class="question-container">
+            <div class="question-text" id="questionText">正在载入题目……</div>
+            <div class="options-grid" id="optionsGrid">
+                <!-- Dynamically Populated -->
+            </div>
+        </div>
+
+        <!-- Gameplay Canvas Area -->
+        <div class="game-canvas-container" id="canvasContainer">
+            <canvas id="gameCanvas"></canvas>
+            <div class="feedback-banner" id="feedbackBanner">答对了！✓</div>
+        </div>
+
+        <!-- 1. INTRO SCREEN OVERLAY -->
+        <div class="overlay-screen" id="introScreen">
+            <div style="font-size: 4rem; margin-bottom: 10px;">🍉 🥷 🍍</div>
+            <div class="intro-title">LEVEL 2</div>
+            <div class="intro-sub">水果忍者 · 历史挑战</div>
+        </div>
+
+        <!-- 2. INSTRUCTION SCREEN OVERLAY -->
+        <div class="overlay-screen hidden" id="instructionScreen">
+            <div class="card-box">
+                <div style="margin-bottom: 8px;">
+                    <span class="floating-fruit" style="animation-delay: 0s;">🍉</span>
+                    <span class="floating-fruit" style="animation-delay: 0.3s;">🍎</span>
+                    <span class="floating-fruit" style="animation-delay: 0.6s;">🍊</span>
+                </div>
+                <div class="card-title">水果忍者挑战！</div>
+                <ul class="instruction-list">
+                    <li>📖 看清楚题目，找出正确答案！</li>
+                    <li>⚔️ 滑动屏幕，切中正确的 A / B / C / D</li>
+                    <li>❤️ 你有 3 次生命</li>
+                    <li>💣 小心炸弹！切中炸弹会失去 1 ❤️</li>
+                </ul>
+                <button class="btn-primary" id="btnStartGame">开始游戏</button>
+            </div>
+        </div>
+
+        <!-- 3. GAME OVER OVERLAY -->
+        <div class="overlay-screen hidden" id="gameOverScreen">
+            <div class="card-box">
+                <div style="font-size: 3rem; margin-bottom: 10px;">💣💥</div>
+                <div class="card-title" style="color: #ef4444;">生命用完了！</div>
+                <p style="color: #cbd5e1; margin-bottom: 20px;">别担心，再挑战一次吧！</p>
+                <button class="btn-primary" id="btnRestart">重新挑战</button>
+            </div>
+        </div>
+
+        <!-- 4. LEVEL COMPLETE OVERLAY -->
+        <div class="overlay-screen hidden" id="levelCompleteScreen">
+            <div class="card-box">
+                <div style="font-size: 3.5rem; margin-bottom: 8px;">🏆 🍉 🎉</div>
+                <div class="card-title" style="color: #4ade80;">LEVEL 2 挑战完成！</div>
+                <p style="color: #94a3b8; font-size: 1.1rem; margin-top: 8px;">最终分数</p>
+                <div id="finalScore" style="font-size: 2.5rem; font-weight: 900; color: #ffd700; margin: 8px 0 20px;">0</div>
+                <button class="btn-primary" id="btnFinishLevel">关卡完成</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- AUDIO SYSTEM & GAME LOGIC -->
+    <script>
+        /* ==========================================================================
+           0. UNIFIED PROGRESSION SYSTEM INTEGRATION (game_level_progression_v1)
+           ========================================================================== */
+        const STORAGE_KEY = 'game_level_progression_v1';
+
+        function completeLevelProgress(levelId, scoreValue) {
+            try {
+                let progress = null;
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    progress = JSON.parse(saved);
+                }
+
+                if (!progress || typeof progress !== 'object') {
+                    progress = {
+                        levels: {
+                            1: { unlocked: true, completed: false, stars: 0, score: 0 }
+                        },
+                        achievements: [],
+                        stats: { totalScore: 0, levelsCompleted: 0 }
+                    };
+                }
+
+                if (!progress.levels) progress.levels = {};
+                if (!progress.stats) progress.stats = { totalScore: 0, levelsCompleted: 0 };
+
+                const id = parseInt(levelId);
+                if (!progress.levels[id]) {
+                    progress.levels[id] = {};
+                }
+                progress.levels[id].completed = true;
+                progress.levels[id].unlocked = true;
+
+                if (scoreValue !== undefined) {
+                    progress.levels[id].score = scoreValue;
+                }
+
+                // Unlock Level 3
+                const nextId = id + 1;
+                if (nextId <= 9) {
+                    if (!progress.levels[nextId]) {
+                        progress.levels[nextId] = {};
+                    }
+                    progress.levels[nextId].unlocked = true;
+                }
+
+                // Recalculate stats dynamically
+                let totalScore = 0;
+                let completedCount = 0;
+                Object.keys(progress.levels).forEach(k => {
+                    const lvl = progress.levels[k];
+                    if (lvl.completed) completedCount++;
+                    if (lvl.score) totalScore += lvl.score;
+                });
+                progress.stats.totalScore = totalScore;
+                progress.stats.levelsCompleted = completedCount;
+
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+            } catch (e) {
+                console.error("Failed to update progression:", e);
+            }
+        }
+
+        /* ==========================================================================
+           1. CONFIGURATION & QUESTIONS DATA
+           ========================================================================== */
+        const QUESTIONS = [
+            {
+                q: "1. Bilakah kesungguhan Malaysia memerangi bahaya penyalahgunaan dadah disuarakan dalam International Drug Enforcement Conference (IDEC)?",
+                options: [
+                    { letter: "A", text: "1979" },
+                    { letter: "B", text: "1983" },
+                    { letter: "C", text: "1988" },
+                    { letter: "D", text: "1995" }
+                ],
+                correct: "B"
+            },
+            {
+                q: "2. Apakah akta yang berkaitan dengan tuntutan Malaysia terhadap sebahagian Kepulauan Spratly?",
+                options: [
+                    { letter: "A", text: "Akta Keselamatan Negara 1979" },
+                    { letter: "B", text: "Akta Zon Ekonomi Eksklusif 1984" },
+                    { letter: "C", text: "Akta ASEAN 1995" },
+                    { letter: "D", text: "Akta Laut Antarabangsa 2002" }
+                ],
+                correct: "B"
+            },
+            {
+                q: "3. Apakah penyakit berjangkit yang dikesan di Malaysia pada tahun 1986?",
+                options: [
+                    { letter: "A", text: "COVID-19" },
+                    { letter: "B", text: "AIDS" },
+                    { letter: "C", text: "Influenza" },
+                    { letter: "D", text: "Denggi" }
+                ],
+                correct: "B"
+            },
+            {
+                q: "4. Apakah yang dimaksudkan dengan kerjasama pembangunan ekonomi segi tiga?",
+                options: [
+                    { letter: "A", text: "Pembangunan wilayah baharu bersama-sama negara anggota ASEAN" },
+                    { letter: "B", text: "Kerjasama tiga negara maju sahaja" },
+                    { letter: "C", text: "Pembentukan kerajaan tiga negara" },
+                    { letter: "D", text: "Penggabungan mata wang dunia" }
+                ],
+                correct: "A"
+            },
+            {
+                q: "5. Apakah manfaat kerjasama ekonomi segi tiga?",
+                options: [
+                    { letter: "A", text: "Mengurangkan monopoli pasaran barangan dalam ASEAN oleh negara maju" },
+                    { letter: "B", text: "Meningkatkan kebergantungan kepada negara maju" },
+                    { letter: "C", text: "Menghapuskan perdagangan ASEAN" },
+                    { letter: "D", text: "Mengurangkan pelaburan dalam ASEAN" }
+                ],
+                correct: "A"
+            }
+        ];
+
+        const FRUIT_TYPES = [
+            { name: 'apple', color: '#ff4d4d', juiceColor: 'rgba(255, 77, 77, 0.8)', emoji: '🍎', radius: 28 },
+            { name: 'watermelon', color: '#ff2a6d', juiceColor: 'rgba(255, 42, 109, 0.8)', emoji: '🍉', radius: 32 },
+            { name: 'orange', color: '#ffa500', juiceColor: 'rgba(255, 165, 0, 0.8)', emoji: '🍊', radius: 28 },
+            { name: 'starfruit', color: '#facc15', juiceColor: 'rgba(250, 204, 21, 0.8)', emoji: '⭐', radius: 26 },
+            { name: 'grapes', color: '#a855f7', juiceColor: 'rgba(168, 85, 247, 0.8)', emoji: '🍇', radius: 28 }
+        ];
+
+        /* ==========================================================================
+           2. AUDIO MANAGER (BGM, Victory SFX & Synthesizer)
+           ========================================================================== */
+        // Background Music
+        const bgm = new Audio('cute-music.mp3');
+        bgm.loop = true;
+        bgm.volume = 0.30;
+
+        // Level Completion Victory Sound
+        const levelCompleteSound = new Audio('game-level-completed.wav');
+        levelCompleteSound.loop = false;
+
+        function playBGM() {
+            if (bgm) {
+                bgm.play().catch(e => console.warn('BGM play blocked or missing:', e));
+            }
+        }
+
+        function pauseBGM() {
+            if (bgm) {
+                bgm.pause();
+            }
+        }
+
+        function restartBGM() {
+            if (bgm) {
+                bgm.currentTime = 0;
+                bgm.play().catch(e => console.warn('BGM restart blocked or missing:', e));
+            }
+        }
+
+        function stopBGM() {
+            if (bgm) {
+                bgm.pause();
+                bgm.currentTime = 0;
+            }
+        }
+
+        function playLevelCompleteSound() {
+            if (levelCompleteSound) {
+                levelCompleteSound.currentTime = 0;
+                levelCompleteSound.play().catch(e => console.warn('Victory sound blocked or missing:', e));
+            }
+        }
+
+        function stopLevelCompleteSound() {
+            if (levelCompleteSound) {
+                levelCompleteSound.pause();
+                levelCompleteSound.currentTime = 0;
+            }
+        }
+
+        // Sound Effects Synthesizer
+        class SoundEffects {
+            constructor() {
+                this.ctx = null;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (AudioCtx) this.ctx = new AudioCtx();
+                }
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            playSlice() {
+                if (!this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(800 + Math.random() * 400, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(100, this.ctx.currentTime + 0.08);
+                    gain.gain.setValueAtTime(0.3, this.ctx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.08);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.08);
+                } catch(e) {}
+            }
+
+            playBomb() {
+                if (!this.ctx) return;
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(30, this.ctx.currentTime + 0.4);
+                    gain.gain.setValueAtTime(0.6, this.ctx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.01, this.ctx.currentTime + 0.4);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(this.ctx.currentTime + 0.4);
+                } catch(e) {}
+            }
+
+            playCorrect() {
+                if (!this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(523.25, now);
+                    osc.frequency.setValueAtTime(659.25, now + 0.1);
+                    osc.frequency.setValueAtTime(783.99, now + 0.2);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.4);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(now + 0.4);
+                } catch(e) {}
+            }
+
+            playWrong() {
+                if (!this.ctx) return;
+                try {
+                    const now = this.ctx.currentTime;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(220, now);
+                    osc.frequency.setValueAtTime(180, now + 0.15);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.linearRampToValueAtTime(0.01, now + 0.3);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start();
+                    osc.stop(now + 0.3);
+                } catch(e) {}
+            }
+        }
+
+        const audioMgr = new SoundEffects();
+
+        /* ==========================================================================
+           3. GAME STATE MANAGEMENT
+           ========================================================================== */
+        const STATES = {
+            INTRO: 'INTRO',
+            INSTRUCTIONS: 'INSTRUCTIONS',
+            PLAYING: 'PLAYING',
+            FEEDBACK: 'FEEDBACK',
+            GAME_OVER: 'GAME_OVER',
+            COMPLETE: 'COMPLETE'
+        };
+
+        let currentState = STATES.INTRO;
+        let currentQuestionIdx = 0;
+        let lives = 3;
+        let score = 0;
+        let activeObjects = [];
+        let particles = [];
+        let sliceTrail = [];
+        let spawnTimer = null;
+        let lastCorrectSpawnTime = 0;
+
+        // Canvas Setup
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const container = document.getElementById('canvasContainer');
+        const wrapper = document.getElementById('gameWrapper');
+
+        function resizeCanvas() {
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+
+        /* ==========================================================================
+           4. GAME OBJECT CLASSES (Fruits, ABCD Badges, Cartoon Bomb)
+           ========================================================================== */
+        class SpawnableObject {
+            constructor(type, letter = null) {
+                this.type = type; // 'fruit', 'target', 'bomb'
+                this.letter = letter; // 'A', 'B', 'C', 'D' if target
+                this.radius = 32;
+
+                if (type === 'fruit') {
+                    this.fruitData = FRUIT_TYPES[Math.floor(Math.random() * FRUIT_TYPES.length)];
+                    this.radius = this.fruitData.radius;
+                } else if (type === 'target') {
+                    this.radius = 30;
+                } else if (type === 'bomb') {
+                    this.radius = 28;
+                }
+
+                // Launch Physics
+                const padding = 50;
+                this.x = padding + Math.random() * (canvas.width - padding * 2);
+                this.y = canvas.height + this.radius;
+
+                const centerDiff = (canvas.width / 2 - this.x) * 0.002;
+                this.vx = (Math.random() - 0.5) * 2 + centerDiff * 2;
+                this.vy = -(11 + Math.random() * 3.5) * (canvas.height / 500);
+                this.gravity = 0.28 * (canvas.height / 500);
+                this.rotation = Math.random() * Math.PI * 2;
+                this.vRot = (Math.random() - 0.5) * 0.1;
+
+                this.sliced = false;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += this.gravity;
+                this.rotation += this.vRot;
+            }
+
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+
+                if (this.type === 'fruit') {
+                    ctx.font = `${this.radius * 1.8}px sans-serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(this.fruitData.emoji, 0, 0);
+                } 
+                else if (this.type === 'target') {
+                    const gradient = ctx.createRadialGradient(0, 0, 5, 0, 0, this.radius);
+                    gradient.addColorStop(0, '#ffe066');
+                    gradient.addColorStop(1, '#f59e0b');
+
+                    ctx.beginPath();
+                    ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+                    ctx.fillStyle = gradient;
+                    ctx.fill();
+                    ctx.lineWidth = 3;
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#111827';
+                    ctx.font = '900 24px -apple-system, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText(this.letter, 0, 1);
+                } 
+                else if (this.type === 'bomb') {
+                    ctx.shadowColor = 'rgba(0, 0, 0, 0.4)';
+                    ctx.shadowBlur = 8;
+                    ctx.font = `${this.radius * 2.2}px sans-serif`;
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.fillText('💣', 0, 0);
+                }
+
+                ctx.restore();
+            }
+        }
+
+        /* Particles & Juice Slices */
+        class FruitHalf {
+            constructor(x, y, emoji, vx, vy, rot) {
+                this.x = x;
+                this.y = y;
+                this.emoji = emoji;
+                this.vx = vx;
+                this.vy = vy;
+                this.rotation = rot;
+                this.vRot = (Math.random() - 0.5) * 0.2;
+                this.alpha = 1;
+                this.gravity = 0.3;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += this.gravity;
+                this.rotation += this.vRot;
+                this.alpha -= 0.015;
+            }
+
+            draw(ctx) {
+                if (this.alpha <= 0) return;
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.alpha);
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.rotation);
+                ctx.font = '24px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(this.emoji, 0, 0);
+                ctx.restore();
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color, speedScale = 1) {
+                this.x = x;
+                this.y = y;
+                this.color = color;
+                const angle = Math.random() * Math.PI * 2;
+                const speed = (Math.random() * 6 + 2) * speedScale;
+                this.vx = Math.cos(angle) * speed;
+                this.vy = Math.sin(angle) * speed;
+                this.radius = Math.random() * 5 + 3;
+                this.alpha = 1;
+                this.gravity = 0.2;
+            }
+
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vy += this.gravity;
+                this.alpha -= 0.025;
+            }
+
+            draw(ctx) {
+                if (this.alpha <= 0) return;
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.alpha);
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+
+        class FloatingText {
+            constructor(x, y, text, color) {
+                this.x = x;
+                this.y = y;
+                this.text = text;
+                this.color = color;
+                this.vy = -2;
+                this.alpha = 1;
+            }
+
+            update() {
+                this.y += this.vy;
+                this.alpha -= 0.02;
+            }
+
+            draw(ctx) {
+                if (this.alpha <= 0) return;
+                ctx.save();
+                ctx.globalAlpha = Math.max(0, this.alpha);
+                ctx.fillStyle = this.color;
+                ctx.font = '900 22px -apple-system, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(this.text, this.x, this.y);
+                ctx.restore();
+            }
+        }
+
+        /* ==========================================================================
+           5. SPAWN MANAGER & GUARANTEED ANSWER LOGIC
+           ========================================================================== */
+        function spawnObjects() {
+            if (currentState !== STATES.PLAYING) return;
+
+            const now = Date.now();
+            const currentQ = QUESTIONS[currentQuestionIdx];
+            const correctLetter = currentQ.correct;
+
+            if (activeObjects.length < 4) {
+                const rand = Math.random();
+                let newObj = null;
+
+                if (now - lastCorrectSpawnTime > 4000) {
+                    newObj = new SpawnableObject('target', correctLetter);
+                    lastCorrectSpawnTime = now;
+                } else if (rand < 0.45) {
+                    newObj = new SpawnableObject('fruit');
+                } else if (rand < 0.75) {
+                    const letters = ['A', 'B', 'C', 'D'];
+                    const picked = letters[Math.floor(Math.random() * letters.length)];
+                    if (picked === correctLetter) lastCorrectSpawnTime = now;
+                    newObj = new SpawnableObject('target', picked);
+                } else {
+                    newObj = new SpawnableObject('bomb');
+                }
+
+                if (newObj) activeObjects.push(newObj);
+            }
+
+            const delay = Math.random() * 800 + 700;
+            spawnTimer = setTimeout(spawnObjects, delay);
+        }
+
+        /* ==========================================================================
+           6. SWIPE INTERACTION & COLLISION DETECTION
+           ========================================================================== */
+        let isSwiping = false;
+
+        function addPoint(x, y) {
+            const rect = canvas.getBoundingClientRect();
+            const touchX = x - rect.left;
+            const touchY = y - rect.top;
+            sliceTrail.push({ x: touchX, y: touchY, time: Date.now() });
+        }
+
+        function handlePointerDown(e) {
+            audioMgr.init();
+            isSwiping = true;
+            sliceTrail = [];
+            addPoint(e.clientX, e.clientY);
+        }
+
+        function handlePointerMove(e) {
+            if (!isSwiping) return;
+            addPoint(e.clientX, e.clientY);
+            checkSliceIntersections();
+        }
+
+        function handlePointerUp() {
+            isSwiping = false;
+        }
+
+        canvas.addEventListener('pointerdown', handlePointerDown);
+        canvas.addEventListener('pointermove', handlePointerMove);
+        window.addEventListener('pointerup', handlePointerUp);
+        canvas.addEventListener('pointercancel', handlePointerUp);
+
+        function distToSegmentSquared(p, v, w) {
+            const l2 = (v.x - w.x) ** 2 + (v.y - w.y) ** 2;
+            if (l2 === 0) return (p.x - v.x) ** 2 + (p.y - v.y) ** 2;
+            let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+            t = Math.max(0, Math.min(1, t));
+            return (p.x - (v.x + t * (w.x - v.x))) ** 2 + (p.y - (v.y + t * (w.y - v.y))) ** 2;
+        }
+
+        function checkSliceIntersections() {
+            if (sliceTrail.length < 2 || currentState !== STATES.PLAYING) return;
+
+            const p1 = sliceTrail[sliceTrail.length - 2];
+            const p2 = sliceTrail[sliceTrail.length - 1];
+
+            for (let i = activeObjects.length - 1; i >= 0; i--) {
+                const obj = activeObjects[i];
+                if (obj.sliced) continue;
+
+                const distSq = distToSegmentSquared({ x: obj.x, y: obj.y }, p1, p2);
+                if (distSq <= obj.radius ** 2) {
+                    sliceObject(obj, i);
+                }
+            }
+        }
+
+        function sliceObject(obj, index) {
+            obj.sliced = true;
+            activeObjects.splice(index, 1);
+
+            if (obj.type === 'fruit') {
+                audioMgr.playSlice();
+                score += 10;
+                updateHUD();
+
+                for (let k = 0; k < 12; k++) {
+                    particles.push(new Particle(obj.x, obj.y, obj.fruitData.juiceColor));
+                }
+                particles.push(new FruitHalf(obj.x - 10, obj.y, obj.fruitData.emoji, -3, -2, obj.rotation));
+                particles.push(new FruitHalf(obj.x + 10, obj.y, obj.fruitData.emoji, 3, -2, obj.rotation));
+                particles.push(new FloatingText(obj.x, obj.y, '+10', '#4ade80'));
+            } 
+            else if (obj.type === 'target') {
+                const currentQ = QUESTIONS[currentQuestionIdx];
+                if (obj.letter === currentQ.correct) {
+                    audioMgr.playCorrect();
+                    score += 100;
+                    updateHUD();
+
+                    for (let k = 0; k < 18; k++) {
+                        particles.push(new Particle(obj.x, obj.y, '#ffd700', 1.5));
+                    }
+                    particles.push(new FloatingText(obj.x, obj.y, '答对了！ +100', '#ffd700'));
+
+                    triggerFeedback(true);
+                } else {
+                    audioMgr.playWrong();
+                    for (let k = 0; k < 8; k++) {
+                        particles.push(new Particle(obj.x, obj.y, '#f59e0b'));
+                    }
+                    triggerFeedback(false);
+                }
+            } 
+            else if (obj.type === 'bomb') {
+                audioMgr.playBomb();
+                lives--;
+                updateHUD();
+
+                wrapper.classList.add('shake');
+                setTimeout(() => wrapper.classList.remove('shake'), 400);
+
+                for (let k = 0; k < 25; k++) {
+                    particles.push(new Particle(obj.x, obj.y, k % 2 === 0 ? '#ef4444' : '#f59e0b', 2));
+                }
+
+                if (lives <= 0) {
+                    triggerGameOver();
+                }
+            }
+        }
+
+        /* ==========================================================================
+           7. FEEDBACK & QUESTION FLOW
+           ========================================================================== */
+        function triggerFeedback(isCorrect) {
+            const banner = document.getElementById('feedbackBanner');
+            if (isCorrect) {
+                currentState = STATES.FEEDBACK;
+                banner.textContent = '答对了！✓';
+                banner.className = 'feedback-banner correct show';
+
+                setTimeout(() => {
+                    banner.className = 'feedback-banner';
+                    currentQuestionIdx++;
+                    if (currentQuestionIdx >= QUESTIONS.length) {
+                        triggerLevelComplete();
+                    } else {
+                        loadQuestion(currentQuestionIdx);
+                        currentState = STATES.PLAYING;
+                        lastCorrectSpawnTime = Date.now();
+                        spawnObjects();
+                    }
+                }, 1200);
+            } else {
+                banner.textContent = '再试一次！';
+                banner.className = 'feedback-banner wrong show';
+                setTimeout(() => {
+                    banner.className = 'feedback-banner';
+                }, 800);
+            }
+        }
+
+        function loadQuestion(idx) {
+            const q = QUESTIONS[idx];
+            document.getElementById('qProgress').textContent = `第 ${idx + 1} / ${QUESTIONS.length} 题`;
+            document.getElementById('questionText').innerText = q.q;
+
+            const grid = document.getElementById('optionsGrid');
+            grid.innerHTML = '';
+            q.options.forEach(opt => {
+                const card = document.createElement('div');
+                card.className = 'option-card';
+                card.innerHTML = `<span class="option-badge">${opt.letter}</span><span>${opt.text}</span>`;
+                grid.appendChild(card);
+            });
+        }
+
+        function updateHUD() {
+            document.getElementById('scoreDisplay').textContent = `分数：${score}`;
+            let hearts = '';
+            for (let i = 0; i < 3; i++) {
+                hearts += i < lives ? '❤️ ' : '🖤 ';
+            }
+            document.getElementById('livesDisplay').textContent = hearts.trim();
+        }
+
+        /* ==========================================================================
+           8. GAME LOOP & RENDERING
+           ========================================================================== */
+        function gameLoop() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (currentState === STATES.PLAYING || currentState === STATES.FEEDBACK) {
+                for (let i = activeObjects.length - 1; i >= 0; i--) {
+                    const obj = activeObjects[i];
+                    obj.update();
+                    obj.draw(ctx);
+
+                    if (obj.y > canvas.height + 60) {
+                        activeObjects.splice(i, 1);
+                    }
+                }
+            }
+
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                p.update();
+                p.draw(ctx);
+                if (p.alpha <= 0) particles.splice(i, 1);
+            }
+
+            const now = Date.now();
+            sliceTrail = sliceTrail.filter(pt => now - pt.time < 150);
+
+            if (sliceTrail.length > 1) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.moveTo(sliceTrail[0].x, sliceTrail[0].y);
+                for (let i = 1; i < sliceTrail.length; i++) {
+                    ctx.lineTo(sliceTrail[i].x, sliceTrail[i].y);
+                }
+                ctx.strokeStyle = '#38bdf8';
+                ctx.lineWidth = 5;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.shadowColor = '#0284c7';
+                ctx.shadowBlur = 12;
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        /* ==========================================================================
+           9. OVERLAY SCREENS & MAP PROGRESS SAVING
+           ========================================================================== */
+        function showScreen(screenId) {
+            ['introScreen', 'instructionScreen', 'gameOverScreen', 'levelCompleteScreen'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            if (screenId) {
+                document.getElementById(screenId).classList.remove('hidden');
+            }
+        }
+
+        function startLevel() {
+            lives = 3;
+            score = 0;
+            currentQuestionIdx = 0;
+            activeObjects = [];
+            particles = [];
+            stopLevelCompleteSound(); // Reset victory sound if active
+            updateHUD();
+            loadQuestion(0);
+            showScreen(null);
+
+            currentState = STATES.PLAYING;
+            lastCorrectSpawnTime = Date.now();
+            clearTimeout(spawnTimer);
+            
+            // Start / Restart BGM cleanly from 0:00
+            restartBGM();
+            
+            spawnObjects();
+        }
+
+        function triggerGameOver() {
+            currentState = STATES.GAME_OVER;
+            clearTimeout(spawnTimer);
+            activeObjects = [];
+            pauseBGM(); // Pause BGM on Game Over
+            showScreen('gameOverScreen');
+        }
+
+        function triggerLevelComplete() {
+            currentState = STATES.COMPLETE;
+            clearTimeout(spawnTimer);
+            activeObjects = [];
+            
+            pauseBGM(); // Pause background music
+            playLevelCompleteSound(); // Play dedicated victory sound once
+
+            document.getElementById('finalScore').textContent = score;
+            showScreen('levelCompleteScreen');
+        }
+
+        /* ==========================================================================
+           10. INITIALIZATION & EVENT LISTENERS
+           ========================================================================== */
+        document.getElementById('btnStartGame').addEventListener('click', () => {
+            audioMgr.init();
+            startLevel();
+        });
+
+        document.getElementById('btnRestart').addEventListener('click', () => {
+            audioMgr.init();
+            startLevel();
+        });
+
+        document.getElementById('btnFinishLevel').addEventListener('click', () => {
+            stopBGM(); // Stop BGM before returning to index.html map
+            stopLevelCompleteSound(); // Stop victory sound before returning
+            completeLevelProgress(2, score); // Save Level 2 completion & unlock Level 3
+            window.location.href = 'index.html'; // Navigate back to main level selection
+        });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            resizeCanvas();
+            loadQuestion(0);
+            updateHUD();
+            requestAnimationFrame(gameLoop);
+
+            setTimeout(() => {
+                showScreen('instructionScreen');
+                currentState = STATES.INSTRUCTIONS;
+            }, 1800);
+        });
+    </script>
+</body>
+</html>

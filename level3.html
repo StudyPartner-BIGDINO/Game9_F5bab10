@@ -1,0 +1,2826 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>第3关 – 贪吃蛇 | 伊甸园历险记</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            height: 100dvh;
+            overflow: hidden;
+            background-color: #020503;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", serif;
+            color: #ffffff;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* 9:16 Portrait Game Frame */
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
+            max-width: 520px;
+            max-height: 925px;
+            background: #040d07;
+            box-shadow: 0 0 60px rgba(0, 0, 0, 0.95), 0 0 20px rgba(34, 197, 94, 0.15);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        @media (min-width: 530px) {
+            #game-container {
+                border-radius: 20px;
+                border: 2px solid rgba(212, 175, 55, 0.5);
+                height: 96vh;
+                height: 96dvh;
+            }
+        }
+
+        /* Gameplay Background Image Layer */
+        #gameplay-bg-layer {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            background-image: url('level3_gameplay_bg.png');
+            background-size: cover;
+            background-position: center center;
+            background-repeat: no-repeat;
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        /* Subtle overlay for enhanced gameplay contrast & object readability */
+        #gameplay-bg-overlay {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 20, 8, 0.12);
+            pointer-events: none;
+            z-index: 2;
+        }
+
+        /* Canvas Arena */
+        #gameCanvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+            touch-action: none;
+            z-index: 5;
+        }
+
+        /* HUD Top Bar with Mobile Safe Area Support */
+        #hud-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: calc(env(safe-area-inset-top, 0px) + 12px) 16px 10px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 20;
+            background: linear-gradient(180deg, rgba(3, 10, 6, 0.92) 0%, rgba(3, 10, 6, 0) 100%);
+            pointer-events: none;
+        }
+
+        .hud-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            pointer-events: auto;
+        }
+
+        .hud-badge {
+            background: rgba(10, 26, 16, 0.85);
+            border: 1px solid rgba(212, 175, 55, 0.6);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.88rem;
+            font-weight: bold;
+            color: #fef08a;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            backdrop-filter: blur(6px);
+        }
+
+        .hud-stars {
+            color: #ffd700;
+            font-size: 1.1rem;
+            letter-spacing: 2px;
+            text-shadow: 0 0 8px rgba(255, 215, 0, 0.7);
+        }
+
+        .hud-btn {
+            background: radial-gradient(circle, #3d2716 0%, #1c1108 100%);
+            border: 1.5px solid #d4af37;
+            color: #ffd700;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            font-size: 1.1rem;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+            transition: transform 0.15s ease;
+        }
+
+        .hud-btn:active {
+            transform: scale(0.92);
+        }
+
+        /* Active Question Compact Header Bar synchronized with HUD position */
+        #active-question-bar {
+            position: absolute;
+            top: calc(env(safe-area-inset-top, 0px) + 64px);
+            left: 50%;
+            transform: translateX(-50%);
+            width: 92%;
+            background: rgba(12, 24, 16, 0.94);
+            border: 1px solid rgba(212, 175, 55, 0.65);
+            border-radius: 12px;
+            padding: 8px 12px;
+            z-index: 18;
+            backdrop-filter: blur(8px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.7);
+            display: none;
+            text-align: center;
+            animation: fadeInDown 0.4s ease;
+            transition: max-height 0.3s ease;
+        }
+
+        #active-question-wrapper {
+            position: relative;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+
+        #active-question-text {
+            color: #fef08a;
+            font-size: 0.85rem;
+            line-height: 1.35;
+            font-weight: 700;
+            text-align: left;
+            flex: 1;
+            /* Default clamped 2 lines */
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            transition: all 0.25s ease;
+        }
+
+        /* Expanded State for Long Questions */
+        #active-question-bar.expanded #active-question-text {
+            display: block;
+            -webkit-line-clamp: unset;
+            overflow: visible;
+        }
+
+        #btn-toggle-expand {
+            background: rgba(212, 175, 55, 0.15);
+            border: 1px solid rgba(212, 175, 55, 0.5);
+            color: #ffd700;
+            font-size: 0.75rem;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            display: none; /* Auto-shown only when overflow detected */
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            flex-shrink: 0;
+            margin-top: 2px;
+            transition: background 0.2s, transform 0.2s;
+        }
+
+        #btn-toggle-expand:hover {
+            background: rgba(212, 175, 55, 0.35);
+        }
+
+        #active-options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 4px;
+            font-size: 0.72rem;
+            color: #d1fae5;
+            text-align: left;
+            margin-top: 4px;
+        }
+
+        .active-opt-item {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            background: rgba(255, 255, 255, 0.06);
+            padding: 3px 6px;
+            border-radius: 4px;
+            border-left: 2px solid #d4af37;
+        }
+
+        /* Responsive UI Adjustments for Mobile Viewports */
+        @media (max-width: 480px) {
+            #hud-container {
+                padding: calc(env(safe-area-inset-top, 0px) + 10px) 10px 6px 10px;
+            }
+            .hud-group {
+                gap: 6px;
+            }
+            .hud-badge {
+                padding: 4px 8px;
+                font-size: 0.78rem;
+                gap: 4px;
+            }
+            .hud-stars {
+                font-size: 0.95rem;
+                letter-spacing: 1px;
+            }
+            .hud-btn {
+                width: 32px;
+                height: 32px;
+                font-size: 0.95rem;
+            }
+            #active-question-bar {
+                top: calc(env(safe-area-inset-top, 0px) + 54px);
+                width: 95%;
+                padding: 6px 10px;
+            }
+            #active-question-text {
+                font-size: 0.78rem;
+                line-height: 1.25;
+            }
+            #btn-toggle-expand {
+                width: 20px;
+                height: 20px;
+                font-size: 0.7rem;
+            }
+            #active-options-grid {
+                gap: 3px;
+                font-size: 0.68rem;
+                margin-top: 3px;
+            }
+            .active-opt-item {
+                padding: 2px 5px;
+            }
+            .parchment-card {
+                padding: 16px 14px;
+            }
+            .parchment-title {
+                font-size: 1.1rem;
+            }
+            .question-body {
+                font-size: 0.88rem;
+                padding: 10px;
+                margin-bottom: 10px;
+            }
+            .option-card-item {
+                padding: 6px 10px;
+                font-size: 0.82rem;
+            }
+        }
+
+        @media (max-width: 360px) {
+            #hud-container {
+                padding: calc(env(safe-area-inset-top, 0px) + 8px) 6px 4px 6px;
+            }
+            .hud-badge {
+                padding: 3px 6px;
+                font-size: 0.72rem;
+            }
+            .hud-stars {
+                font-size: 0.85rem;
+            }
+            #active-question-bar {
+                top: calc(env(safe-area-inset-top, 0px) + 48px);
+                padding: 5px 8px;
+            }
+            #active-question-text {
+                font-size: 0.74rem;
+            }
+            #active-options-grid {
+                font-size: 0.64rem;
+            }
+        }
+
+        /* Modal Overlays (Parchment Quest Card & Game Rules Card) */
+        .modal-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(2, 8, 4, 0.85);
+            backdrop-filter: blur(10px);
+            z-index: 50;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.35s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .parchment-card {
+            background: linear-gradient(135deg, #f5eccf 0%, #e3d3a3 100%);
+            border: 8px solid #2d1e12;
+            outline: 2px solid #d4af37;
+            border-radius: 18px;
+            padding: 22px 18px;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.85), inset 0 0 40px rgba(139, 90, 43, 0.25);
+            color: #2a1a08;
+            position: relative;
+            transform: scale(0.92);
+            transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .modal-overlay.active .parchment-card {
+            transform: scale(1);
+        }
+
+        .parchment-header {
+            text-align: center;
+            border-bottom: 2px dashed #8b5a2b;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+        }
+
+        .parchment-title {
+            font-size: 1.25rem;
+            font-weight: 900;
+            color: #4a2e12;
+            letter-spacing: 1px;
+        }
+
+        .parchment-subtitle {
+            font-size: 0.78rem;
+            color: #7a5228;
+            margin-top: 2px;
+        }
+
+        .question-body {
+            font-size: 0.95rem;
+            line-height: 1.45;
+            color: #1a0f05;
+            font-weight: 700;
+            margin-bottom: 14px;
+            background: rgba(255, 255, 255, 0.45);
+            padding: 12px;
+            border-radius: 8px;
+            border-left: 4px solid #8b5a2b;
+            white-space: pre-line;
+        }
+
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 18px;
+        }
+
+        .option-card-item {
+            background: linear-gradient(90deg, rgba(255,255,255,0.8) 0%, rgba(240,225,190,0.6) 100%);
+            border: 1px solid #b89868;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            color: #2b1805;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .opt-badge {
+            background: #4a2e12;
+            color: #ffd700;
+            font-weight: 900;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 0.85rem;
+            flex-shrink: 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+
+        /* ==========================================================================
+           GAME RULES CARD STYLING
+           ========================================================================== */
+        .rules-card {
+            background: linear-gradient(180deg, #122116 0%, #0a140d 100%);
+            border: 2px solid #d4af37;
+            border-radius: 20px;
+            padding: 22px 20px;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.85), inset 0 0 20px rgba(34, 197, 94, 0.12);
+            text-align: center;
+            transform: scale(0.92);
+            transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        .modal-overlay.active .rules-card {
+            transform: scale(1);
+        }
+
+        .rules-title {
+            font-size: 1.6rem;
+            color: #ffd700;
+            font-weight: 900;
+            letter-spacing: 2px;
+            text-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+            margin-bottom: 6px;
+        }
+
+        .rules-subtitle {
+            font-size: 0.9rem;
+            color: #a3e635;
+            font-weight: 700;
+            margin-bottom: 16px;
+        }
+
+        .rules-list {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 16px;
+            text-align: left;
+        }
+
+        .rule-item {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(212, 175, 55, 0.3);
+            border-left: 3.5px solid #d4af37;
+            border-radius: 10px;
+            padding: 9px 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .rule-icon {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 32px;
+        }
+
+        .rule-content {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+
+        .rule-label {
+            color: #fde047;
+            font-weight: 800;
+            font-size: 0.9rem;
+        }
+
+        .rule-desc {
+            color: #d1fae5;
+            font-size: 0.82rem;
+            line-height: 1.3;
+        }
+
+        .rules-footer {
+            font-size: 0.88rem;
+            color: #fef08a;
+            font-weight: 700;
+            margin-bottom: 6px;
+        }
+
+        @media (max-width: 480px) {
+            .rules-card {
+                padding: 18px 14px;
+            }
+            .rules-title {
+                font-size: 1.35rem;
+            }
+            .rules-subtitle {
+                font-size: 0.82rem;
+                margin-bottom: 12px;
+            }
+            .rules-list {
+                gap: 8px;
+                margin-bottom: 12px;
+            }
+            .rule-item {
+                padding: 7px 10px;
+                gap: 10px;
+            }
+            .rule-icon {
+                font-size: 1.35rem;
+                width: 28px;
+            }
+            .rule-label {
+                font-size: 0.84rem;
+            }
+            .rule-desc {
+                font-size: 0.76rem;
+            }
+            .rules-footer {
+                font-size: 0.82rem;
+            }
+        }
+
+        .btn-fantasy {
+            display: block;
+            width: 100%;
+            padding: 13px 0;
+            background: linear-gradient(180deg, #ffd700 0%, #caa000 100%);
+            border: 2px solid #fff2a3;
+            border-radius: 30px;
+            color: #2b1a00;
+            font-size: 1.1rem;
+            font-weight: 900;
+            letter-spacing: 2px;
+            cursor: pointer;
+            text-align: center;
+            box-shadow: 0 6px 20px rgba(255, 215, 0, 0.4), inset 0 2px 0 rgba(255,255,255,0.6);
+            transition: transform 0.15s ease;
+        }
+
+        .btn-fantasy:active {
+            transform: scale(0.97);
+        }
+
+        /* Countdown Display */
+        #countdown-layer {
+            position: absolute;
+            inset: 0;
+            z-index: 45;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        #countdown-layer.active {
+            opacity: 1;
+        }
+
+        #countdown-num {
+            font-size: 6rem;
+            font-weight: 900;
+            color: #ffd700;
+            text-shadow: 0 0 30px #ff9900, 0 0 60px #ff6600, 0 5px 15px rgba(0,0,0,0.8);
+            transform: scale(0.3);
+            opacity: 0;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
+        }
+
+        #countdown-num.animate {
+            transform: scale(1.2);
+            opacity: 1;
+        }
+
+        /* Toast Feedback Banner */
+        #toast-banner {
+            position: absolute;
+            top: 22%;
+            left: 50%;
+            transform: translateX(-50%) translateY(-20px);
+            z-index: 35;
+            padding: 10px 24px;
+            border-radius: 30px;
+            font-size: 1.25rem;
+            font-weight: 900;
+            letter-spacing: 1px;
+            pointer-events: none;
+            opacity: 0;
+            transition: transform 0.3s ease, opacity 0.3s ease;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        #toast-banner.show {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast-correct { background: linear-gradient(135deg, #10b981, #047857); border: 2px solid #6ee7b7; color: #fff; }
+        .toast-wrong { background: linear-gradient(135deg, #ef4444, #b91c1c); border: 2px solid #fca5a5; color: #fff; }
+        .toast-speed { background: linear-gradient(135deg, #f59e0b, #d97706); border: 2px solid #fde68a; color: #fff; }
+        .toast-vine { background: linear-gradient(135deg, #15803d, #064e3b); border: 2px solid #86efac; color: #fff; }
+
+        /* Powerup Bar */
+        #powerup-timer-bar {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60%;
+            height: 10px;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 10px;
+            border: 1px solid rgba(255, 215, 0, 0.4);
+            overflow: hidden;
+            z-index: 25;
+            display: none;
+        }
+
+        #powerup-progress {
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, #ffd700, #ff8c00);
+            border-radius: 10px;
+            transition: width 0.1s linear;
+        }
+
+        /* Pause, Game Over & Victory Modals */
+        .menu-box {
+            background: linear-gradient(180deg, #122116 0%, #0a140d 100%);
+            border: 2px solid #d4af37;
+            border-radius: 20px;
+            padding: 28px 22px;
+            width: 100%;
+            max-width: 380px;
+            text-align: center;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.85);
+        }
+
+        .modal-title-gold {
+            font-size: 1.8rem;
+            color: #ffd700;
+            font-weight: 900;
+            margin-bottom: 18px;
+            letter-spacing: 2px;
+            text-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+        }
+
+        .btn-modal {
+            display: block;
+            width: 100%;
+            padding: 12px 0;
+            margin-top: 12px;
+            background: linear-gradient(135deg, #24382a 0%, #122117 100%);
+            border: 1.5px solid #d4af37;
+            border-radius: 25px;
+            color: #fef08a;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-modal:active {
+            transform: scale(0.96);
+            background: #d4af37;
+            color: #0a140d;
+        }
+
+        .btn-primary-gold {
+            background: linear-gradient(180deg, #ffd700 0%, #b8860b 100%);
+            color: #0c1a11;
+            border: none;
+            box-shadow: 0 4px 15px rgba(255, 215, 0, 0.35);
+        }
+
+        .victory-stats {
+            background: rgba(0,0,0,0.45);
+            border-radius: 12px;
+            padding: 14px;
+            margin: 16px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.95rem;
+            color: #d1d5db;
+        }
+
+        .stat-val {
+            color: #ffd700;
+            font-weight: bold;
+        }
+
+        /* ==========================================================================
+           SEMI-REALISTIC DENSE TROPICAL JUNGLE WALL OVERLAY
+           ========================================================================== */
+        #opening-viewport {
+            position: absolute;
+            inset: 0;
+            z-index: 100;
+            overflow: hidden;
+            background: #020704;
+            pointer-events: auto;
+        }
+
+        /* Sunlight Burst behind foliage */
+        #opening-light-burst {
+            position: absolute;
+            top: 40%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.2);
+            width: 480px;
+            height: 480px;
+            background: radial-gradient(circle, rgba(255, 235, 140, 0.85) 0%, rgba(217, 119, 6, 0.3) 45%, rgba(0,0,0,0) 75%);
+            border-radius: 50%;
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 1.2s ease, transform 1.5s cubic-bezier(0.16, 1, 0.3, 1);
+            pointer-events: none;
+        }
+
+        /* Hanging Branch + Eden Apple (z-101, fully occluded by foliage at 0.0s) */
+        #opening-branch-apple {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 220px;
+            height: 280px;
+            z-index: 101;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.8s ease;
+        }
+
+        #opening-branch-apple.show {
+            opacity: 1;
+        }
+
+        /* SVG Foliage Layers */
+        .foliage-svg-container {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        .foliage-layer-group {
+            transform-box: fill-box;
+            transform-origin: center center;
+            transition: transform 1.8s cubic-bezier(0.2, 1, 0.3, 1), opacity 1.5s ease;
+        }
+
+        #foliage-layer-mat { z-index: 102; }
+        #foliage-layer-back { z-index: 103; }
+        #foliage-layer-mid { z-index: 104; }
+        #foliage-layer-front { 
+            z-index: 105; 
+            filter: drop-shadow(0 14px 28px rgba(0,0,0,0.9)); 
+        }
+
+        /* Title Overlay */
+        #opening-title-container {
+            position: absolute;
+            top: 52%;
+            left: 50%;
+            transform: translate(-50%, -50%) translateY(15px);
+            z-index: 108;
+            text-align: center;
+            opacity: 0;
+            transition: opacity 0.8s ease, transform 0.8s ease;
+            width: 100%;
+            pointer-events: none;
+        }
+
+        #opening-title-container.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) translateY(0);
+        }
+
+        .title-level-badge {
+            font-size: 1.25rem;
+            color: #a3e635;
+            letter-spacing: 6px;
+            text-shadow: 0 0 12px rgba(163, 230, 53, 0.6);
+            font-weight: 800;
+            margin-bottom: 6px;
+        }
+
+        .title-main-text {
+            font-size: 3.4rem;
+            font-weight: 900;
+            background: linear-gradient(180deg, #fffbeb 0%, #fde047 35%, #ca8a04 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            text-shadow: 0 10px 30px rgba(0, 0, 0, 0.9);
+            letter-spacing: 8px;
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translate(-50%, -15px); }
+            to { opacity: 1; transform: translate(-50%, 0); }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <!-- Gameplay Background Image & Subtle Dark Overlay -->
+        <div id="gameplay-bg-layer"></div>
+        <div id="gameplay-bg-overlay"></div>
+
+        <!-- Canvas Arena -->
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- HUD Top Bar -->
+        <div id="hud-container">
+            <div class="hud-group">
+                <div class="hud-badge">第3关</div>
+                <div class="hud-badge" id="hud-question-count">第 1 / 5 题</div>
+            </div>
+            <div class="hud-group">
+                <div class="hud-badge">
+                    <span class="hud-stars" id="hud-stars-display">★★★</span>
+                </div>
+                <div class="hud-badge">
+                    <span>分数:</span>
+                    <span id="hud-score-display" style="color:#ffd700;">0</span>
+                </div>
+                <div class="hud-btn" id="btn-pause" title="暂停">⏸</div>
+            </div>
+        </div>
+
+        <!-- Active Question Compact Header Bar with Dynamic Expand Arrow -->
+        <div id="active-question-bar">
+            <div id="active-question-wrapper">
+                <div id="active-question-text">Question text loading...</div>
+                <button id="btn-toggle-expand" aria-label="展开题目">▼</button>
+            </div>
+            <div id="active-options-grid">
+                <div class="active-opt-item" id="opt-preview-a">A. Option</div>
+                <div class="active-opt-item" id="opt-preview-b">B. Option</div>
+                <div class="active-opt-item" id="opt-preview-c">C. Option</div>
+                <div class="active-opt-item" id="opt-preview-d">D. Option</div>
+            </div>
+        </div>
+
+        <!-- Toast Feedback Banner -->
+        <div id="toast-banner">答对了！</div>
+
+        <!-- Speed Boost Powerup Progress Bar -->
+        <div id="powerup-timer-bar">
+            <div id="powerup-progress"></div>
+        </div>
+
+        <!-- Game Rules Modal -->
+        <div class="modal-overlay" id="rules-modal">
+            <div class="rules-card">
+                <div class="rules-title">游戏规则</div>
+                <div class="rules-subtitle">控制贪吃蛇，寻找并吃掉正确答案！</div>
+                
+                <div class="rules-list">
+                    <div class="rule-item">
+                        <span class="rule-icon">🍎</span>
+                        <div class="rule-content">
+                            <div class="rule-label">苹果</div>
+                            <div class="rule-desc">吃下苹果，贪吃蛇会加速一段时间。</div>
+                        </div>
+                    </div>
+                    <div class="rule-item">
+                        <span class="rule-icon">🌿</span>
+                        <div class="rule-content">
+                            <div class="rule-label">藤蔓</div>
+                            <div class="rule-desc">碰到藤蔓，贪吃蛇会被减速一段时间。</div>
+                        </div>
+                    </div>
+                    <div class="rule-item">
+                        <span class="rule-icon">❤️</span>
+                        <div class="rule-content">
+                            <div class="rule-label">答错会扣 1 颗心</div>
+                            <div class="rule-desc">3 颗心全部扣完，本关将重新开始。</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="rules-footer">找出所有正确答案，完成挑战！</div>
+                <button class="btn-fantasy" id="btn-start-challenge" style="margin-top: 10px;">开始挑战</button>
+            </div>
+        </div>
+
+        <!-- Full Parchment Question Modal -->
+        <div class="modal-overlay" id="question-modal">
+            <div class="parchment-card">
+                <div class="parchment-header">
+                    <div class="parchment-title" id="modal-q-title">第 1 题</div>
+                    <div class="parchment-subtitle">请仔细阅读题目并控制贪吃蛇选择正确答案</div>
+                </div>
+                <div class="question-body" id="modal-q-text">
+                    Question text loading...
+                </div>
+                <div class="options-list" id="modal-options-list">
+                    <!-- Populated dynamically -->
+                </div>
+                <button class="btn-fantasy" id="btn-start-question">开 始</button>
+            </div>
+        </div>
+
+        <!-- Countdown Overlay -->
+        <div id="countdown-layer">
+            <div id="countdown-num">3</div>
+        </div>
+
+        <!-- Pause Modal -->
+        <div class="modal-overlay" id="pause-modal">
+            <div class="menu-box">
+                <div class="modal-title-gold">游戏暂停</div>
+                <button class="btn-modal btn-primary-gold" id="btn-resume">继续游戏</button>
+                <button class="btn-modal" id="btn-restart">重新开始</button>
+                <button class="btn-modal" id="btn-quit">返回地图</button>
+            </div>
+        </div>
+
+        <!-- Game Over Modal -->
+        <div class="modal-overlay" id="gameover-modal">
+            <div class="menu-box">
+                <div class="modal-title-gold" style="color: #ef4444; text-shadow: 0 0 12px rgba(239, 68, 68, 0.5);">挑战失败</div>
+                <p style="color:#e2e8f0; font-size:0.92rem; margin-bottom:20px; line-height:1.5;">
+                    你的三颗星已经用完，需要重新开始本关。
+                </p>
+                <button class="btn-modal btn-primary-gold" id="btn-restart-gameover">重新开始</button>
+            </div>
+        </div>
+
+        <!-- Victory Modal -->
+        <div class="modal-overlay" id="victory-modal">
+            <div class="menu-box">
+                <div class="modal-title-gold" style="font-size:2rem; margin-bottom:8px;">任务完成</div>
+                <div style="color:#a3e635; font-size:1.1rem; font-weight:bold; margin-bottom:12px;">第3关完成！</div>
+                
+                <div class="victory-stats">
+                    <div class="stat-row">
+                        <span>最终分数</span>
+                        <span class="stat-val" id="victory-score">0</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>获得星星</span>
+                        <span class="stat-val" id="victory-stars" style="color:#ffd700; letter-spacing:2px;">★★★</span>
+                    </div>
+                </div>
+                <p style="color:#e2e8f0; font-size:0.88rem; margin-bottom:18px; line-height:1.4;">
+                    恭喜你成功通关伊甸园的贪吃蛇挑战！
+                </p>
+                <button class="btn-modal btn-primary-gold" id="btn-victory-map">关卡完成</button>
+            </div>
+        </div>
+
+        <!-- Cinematic Opening Viewport -->
+        <div id="opening-viewport">
+            <!-- Light Shaft Burst (Background z-100) -->
+            <div id="opening-light-burst"></div>
+
+            <!-- Hanging Branch + Semi-Realistic Eden Apple (z-101, occluded at 0.0s) -->
+            <div id="opening-branch-apple">
+                <svg width="220" height="280" viewBox="0 0 220 280">
+                    <defs>
+                        <radialGradient id="appleBodyGrad" cx="35%" cy="30%" r="70%">
+                            <stop offset="0%" stop-color="#ff8888" />
+                            <stop offset="25%" stop-color="#dc2626" />
+                            <stop offset="70%" stop-color="#991b1b" />
+                            <stop offset="100%" stop-color="#450a0a" />
+                        </radialGradient>
+                        <radialGradient id="appleHighlight" cx="30%" cy="25%" r="35%">
+                            <stop offset="0%" stop-color="rgba(255,255,255,0.7)" />
+                            <stop offset="100%" stop-color="rgba(255,255,255,0)" />
+                        </radialGradient>
+                        <linearGradient id="branchGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#3b200d" />
+                            <stop offset="50%" stop-color="#78350f" />
+                            <stop offset="100%" stop-color="#1c0d04" />
+                        </linearGradient>
+                        <linearGradient id="appleLeafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stop-color="#86efac" />
+                            <stop offset="50%" stop-color="#16a34a" />
+                            <stop offset="100%" stop-color="#064e3b" />
+                        </linearGradient>
+                    </defs>
+
+                    <path d="M 10 -10 Q 70 40 110 90 Q 140 120 220 130" stroke="url(#branchGrad)" stroke-width="9" fill="none" stroke-linecap="round"/>
+                    <path d="M 110 90 Q 90 130 75 160" stroke="url(#branchGrad)" stroke-width="5" fill="none" stroke-linecap="round"/>
+
+                    <path d="M 115 80 Q 145 65 165 85 Q 135 100 115 80" fill="url(#appleLeafGrad)"/>
+                    <path d="M 85 130 Q 55 120 45 140 Q 75 150 85 130" fill="url(#appleLeafGrad)"/>
+
+                    <path d="M 110 135 Q 112 165 110 182" stroke="#451a03" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+
+                    <path d="M 110 162 C 125 145 150 150 145 168 C 130 178 115 170 110 162 Z" fill="url(#appleLeafGrad)"/>
+                    <path d="M 110 162 Q 130 162 145 168" stroke="#fef08a" stroke-width="0.8" fill="none" opacity="0.6"/>
+
+                    <g transform="translate(62, 178)">
+                        <path d="M 48 8 
+                                 C 38 0, 18 2, 8 16 
+                                 C -4 32, -2 60, 14 84 
+                                 C 26 102, 42 106, 48 106 
+                                 C 54 106, 70 102, 82 84 
+                                 C 98 60, 100 32, 88 16 
+                                 C 78 2, 58 0, 48 8 Z" 
+                              fill="url(#appleBodyGrad)"/>
+                        <path d="M 36 6 Q 48 14 60 6 Q 48 10 36 6 Z" fill="#290303" opacity="0.6"/>
+                        <path d="M 48 8 
+                                 C 38 0, 18 2, 8 16 
+                                 C -4 32, -2 60, 14 84 
+                                 C 26 102, 42 106, 48 106 
+                                 C 54 106, 70 102, 82 84 
+                                 C 98 60, 100 32, 88 16 
+                                 C 78 2, 58 0, 48 8 Z" 
+                              fill="url(#appleHighlight)"/>
+                    </g>
+                </svg>
+            </div>
+
+            <!-- SVG Foliage Containers (Z-102, 103, 104, 105) -->
+            <svg class="foliage-svg-container" id="foliage-layer-mat" viewBox="0 0 400 700" preserveAspectRatio="none"></svg>
+            <svg class="foliage-svg-container" id="foliage-layer-back" viewBox="0 0 400 700" preserveAspectRatio="none">
+                <defs id="svg-leaf-defs"></defs>
+            </svg>
+            <svg class="foliage-svg-container" id="foliage-layer-mid" viewBox="0 0 400 700" preserveAspectRatio="none"></svg>
+            <svg class="foliage-svg-container" id="foliage-layer-front" viewBox="0 0 400 700" preserveAspectRatio="none"></svg>
+
+            <!-- Cinematic Title Overlay -->
+            <div id="opening-title-container">
+                <div class="title-level-badge">第 3 关</div>
+                <div class="title-main-text">贪吃蛇</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* ==========================================================================
+           PRELOAD GAMEPLAY BACKGROUND IMAGE
+           ========================================================================== */
+        const bgPreloader = new Image();
+        bgPreloader.src = 'level3_gameplay_bg.png';
+
+        /* ==========================================================================
+           CENTRALIZED AUDIO MANAGER (REAL AUDIO FILES)
+           ========================================================================== */
+        class AudioManager {
+            constructor() {
+                this.unlocked = false;
+                this.bgmPlaying = false;
+
+                this.sounds = {
+                    click: new Audio('click1.mp3'),
+                    bgm: new Audio('snake_bgm.mp3'),
+                    move: new Audio('snake_move.mp3'),
+                    bite: new Audio('snake_appleabcd.mp3'),
+                    vine: new Audio('snake_vine_rustle.mp3'),
+                    wrong: new Audio('wrong.wav'),
+                    correct: new Audio('correct-answer.wav'),
+                    gameOver: new Audio('snake_game_over.mp3'),
+                    victory: new Audio('game-level-completed.wav')
+                };
+
+                // BGM Configuration
+                this.sounds.bgm.loop = true;
+                this.sounds.bgm.volume = 0.25; // Balanced background music level
+
+                // SFX Volume Balancing
+                this.sounds.click.volume = 0.6;
+                this.sounds.move.volume = 0.45;
+                this.sounds.bite.volume = 0.75;
+                this.sounds.vine.volume = 0.75;
+                this.sounds.wrong.volume = 0.85;
+                this.sounds.correct.volume = 0.85;
+                this.sounds.gameOver.volume = 0.95;
+                this.sounds.victory.volume = 0.95;
+            }
+
+            unlock() {
+                if (this.unlocked) return;
+                this.unlocked = true;
+                Object.values(this.sounds).forEach(s => {
+                    s.load();
+                });
+            }
+
+            playSFX(name) {
+                this.unlock();
+                const s = this.sounds[name];
+                if (!s) return;
+                try {
+                    s.currentTime = 0;
+                    s.play().catch(e => console.log(`SFX [${name}] play blocked or interrupted:`, e));
+                } catch(e) {}
+            }
+
+            playBGM() {
+                this.unlock();
+                const bgm = this.sounds.bgm;
+                if (!this.bgmPlaying) {
+                    bgm.play().then(() => {
+                        this.bgmPlaying = true;
+                    }).catch(e => {
+                        console.log('BGM autoplay blocked until user interaction:', e);
+                    });
+                }
+            }
+
+            pauseBGM() {
+                const bgm = this.sounds.bgm;
+                bgm.pause();
+                this.bgmPlaying = false;
+            }
+
+            resumeBGM() {
+                this.unlock();
+                const bgm = this.sounds.bgm;
+                if (!this.bgmPlaying) {
+                    bgm.play().then(() => {
+                        this.bgmPlaying = true;
+                    }).catch(e => {});
+                }
+            }
+
+            stopBGM() {
+                const bgm = this.sounds.bgm;
+                bgm.pause();
+                bgm.currentTime = 0;
+                this.bgmPlaying = false;
+            }
+        }
+        const audioMgr = new AudioManager();
+
+        // Unlock audio context on any initial user touch or click
+        ['touchstart', 'mousedown', 'keydown'].forEach(evt => {
+            window.addEventListener(evt, () => {
+                audioMgr.unlock();
+            }, { once: true });
+        });
+
+        /* ==========================================================================
+           GAME QUESTIONS DATA (Bahasa Melayu - EXACT & UNTOUCHED)
+           ========================================================================== */
+        const QUESTIONS_DATA = [
+            {
+                id: 1,
+                question: "Apakah pertubuhan antarabangsa yang bekerjasama dengan Malaysia dalam usaha memerangi penyalahgunaan dadah?",
+                options: [
+                    { letter: "A", text: "UNESCO" },
+                    { letter: "B", text: "WHO" },
+                    { letter: "C", text: "INTERPOL" },
+                    { letter: "D", text: "UNHCR" }
+                ],
+                correct: "C"
+            },
+            {
+                id: 2,
+                question: "Siapakah yang melancarkan gerakan antiminyak sawit kerana minyak sawit menjadi pesaing utama minyak kacang soya?",
+                options: [
+                    { letter: "A", text: "ASEAN" },
+                    { letter: "B", text: "American Soybean Association (ASA)" },
+                    { letter: "C", text: "PBB" },
+                    { letter: "D", text: "WHO" }
+                ],
+                correct: "B"
+            },
+            {
+                id: 3,
+                question: "Apakah usaha Kementerian Kesihatan Malaysia untuk mengawal penularan AIDS?",
+                options: [
+                    { letter: "A", text: "Menjalankan pemeriksaan kesihatan secara berterusan dan memberikan rawatan" },
+                    { letter: "B", text: "Menutup semua hospital" },
+                    { letter: "C", text: "Menghentikan pemeriksaan kesihatan" },
+                    { letter: "D", text: "Mengharamkan semua perjalanan antarabangsa" }
+                ],
+                correct: "A"
+            },
+            {
+                id: 4,
+                question: "Apakah faktor utama yang menyebabkan kemelesetan ekonomi Malaysia pada tahun 1997–1998 berdasarkan bahan?",
+                options: [
+                    { letter: "A", text: "Kekurangan tenaga kerja" },
+                    { letter: "B", text: "Spekulasi mata wang" },
+                    { letter: "C", text: "Bencana alam" },
+                    { letter: "D", text: "Kekurangan hasil pertanian" }
+                ],
+                correct: "B"
+            },
+            {
+                id: 5,
+                question: "Apakah kesan kejatuhan nilai ringgit terhadap ekonomi Malaysia?",
+                options: [
+                    { letter: "A", text: "Pelabur luar menarik pelaburan mereka" },
+                    { letter: "B", text: "Eksport dihentikan" },
+                    { letter: "C", text: "ASEAN dibubarkan" },
+                    { letter: "D", text: "Harga semua barangan menurun" }
+                ],
+                correct: "A"
+            }
+        ];
+
+        /* ==========================================================================
+           BOTANICAL FOLIAGE SYSTEM (OPENING SCENE)
+           ========================================================================== */
+        const clusterNodesData = [];
+
+        function injectBotanicalDefs() {
+            const defs = document.getElementById('svg-leaf-defs');
+            defs.innerHTML = `
+                <!-- Rich Multi-Stop Natural Gradients -->
+                <linearGradient id="gradForestDeep" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#04180d" />
+                    <stop offset="40%" stop-color="#0f4522" />
+                    <stop offset="85%" stop-color="#1b6335" />
+                </linearGradient>
+
+                <linearGradient id="gradEmerald" x1="20%" y1="0%" x2="80%" y2="100%">
+                    <stop offset="0%" stop-color="#0a2e16" />
+                    <stop offset="45%" stop-color="#15803d" />
+                    <stop offset="85%" stop-color="#229e4d" />
+                    <stop offset="100%" stop-color="#3eb86a" />
+                </linearGradient>
+
+                <linearGradient id="gradMoss" x1="0%" y1="10%" x2="100%" y2="90%">
+                    <stop offset="0%" stop-color="#122404" />
+                    <stop offset="50%" stop-color="#365314" />
+                    <stop offset="85%" stop-color="#4d7c0f" />
+                </linearGradient>
+
+                <linearGradient id="gradJade" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stop-color="#032212" />
+                    <stop offset="50%" stop-color="#115e34" />
+                    <stop offset="100%" stop-color="#1eb063" />
+                </linearGradient>
+
+                <!-- Natural Overlap Shadow -->
+                <filter id="softOverlapShadow" x="-30%" y="-30%" width="160%" height="160%">
+                    <feDropShadow dx="3" dy="5" stdDeviation="4" flood-color="#010a04" flood-opacity="0.85"/>
+                </filter>
+            `;
+        }
+
+        function buildDenseWallOfFoliage() {
+            injectBotanicalDefs();
+
+            const layers = {
+                mat: document.getElementById('foliage-layer-mat'),
+                back: document.getElementById('foliage-layer-back'),
+                mid: document.getElementById('foliage-layer-mid'),
+                front: document.getElementById('foliage-layer-front')
+            };
+
+            Object.values(layers).forEach(el => { if(el) el.innerHTML = ''; });
+            clusterNodesData.length = 0;
+
+            const gradients = ['url(#gradForestDeep)', 'url(#gradEmerald)', 'url(#gradMoss)', 'url(#gradJade)'];
+
+            // 1. FULL BOTANICAL BACKING MAT
+            const matGroup = document.createElementNS("http://www.w3.org/2000/svg", "g");
+            for (let r = -1; r <= 7; r++) {
+                for (let c = -1; c <= 5; c++) {
+                    const bx = c * 85 - 15;
+                    const by = r * 105 - 15;
+
+                    const darkPatch = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                    darkPatch.setAttribute("d", `M ${bx} ${by} 
+                                                 Q ${bx + 90} ${by - 30} ${bx + 140} ${by + 40} 
+                                                 Q ${bx + 120} ${by + 120} ${bx + 30} ${by + 130} 
+                                                 Q ${bx - 20} ${by + 70} ${bx} ${by} Z`);
+                    darkPatch.setAttribute("fill", "#041a0d");
+                    darkPatch.setAttribute("opacity", "0.98");
+                    matGroup.appendChild(darkPatch);
+
+                    const fern = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                    fern.setAttribute("d", `M ${bx + 20} ${by + 10} Q ${bx + 70} ${by + 60} ${bx + 110} ${by + 100}`);
+                    fern.setAttribute("stroke", "#092e18");
+                    fern.setAttribute("stroke-width", "12");
+                    fern.setAttribute("stroke-linecap", "round");
+                    matGroup.appendChild(fern);
+                }
+            }
+            layers.mat.appendChild(matGroup);
+
+            // 2. HELPER: PLANT CLUSTERS
+            function createBotanicalPlantCluster(w, h) {
+                const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                g.setAttribute("filter", "url(#softOverlapShadow)");
+
+                const mainGrad = gradients[Math.floor(Math.random() * gradients.length)];
+
+                const stem = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                stem.setAttribute("d", `M 0 0 Q ${w * 0.45} ${h * 0.2} ${w} ${h}`);
+                stem.setAttribute("stroke", "#0a2614");
+                stem.setAttribute("stroke-width", "4");
+                stem.setAttribute("fill", "none");
+                stem.setAttribute("stroke-linecap", "round");
+                g.appendChild(stem);
+
+                const count = 16;
+                for (let i = 0; i < count; i++) {
+                    const t = i / count;
+                    const lx = w * t + (Math.random() - 0.5) * 22;
+                    const ly = h * t + (Math.random() - 0.5) * 22;
+                    const rx = 26 + Math.random() * 24;
+                    const ry = 16 + Math.random() * 14;
+
+                    const leaf = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                    leaf.setAttribute("d", `M ${lx} ${ly} 
+                                            C ${lx + rx * 0.8} ${ly - ry * 1.3}, ${lx + rx * 1.7} ${ly + ry * 0.3}, ${lx + rx * 0.9} ${ly + ry * 1.9} 
+                                            C ${lx + rx * 0.1} ${ly + ry * 2.3}, ${lx - rx * 0.7} ${ly + ry * 1.1}, ${lx} ${ly} Z`);
+                    leaf.setAttribute("fill", mainGrad);
+                    leaf.setAttribute("stroke", "none");
+                    g.appendChild(leaf);
+
+                    const midrib = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                    midrib.setAttribute("d", `M ${lx} ${ly} Q ${lx + rx * 0.45} ${ly + ry * 0.6} ${lx + rx * 0.9} ${ly + ry * 1.9}`);
+                    midrib.setAttribute("stroke", "#fef08a");
+                    midrib.setAttribute("stroke-width", "0.8");
+                    midrib.setAttribute("fill", "none");
+                    midrib.setAttribute("opacity", "0.35");
+                    g.appendChild(midrib);
+
+                    for (let v = 0; v < 3; v++) {
+                        const vt = (v + 1) / 4;
+                        const vx = lx + (rx * 0.9) * vt;
+                        const vy = ly + (ry * 1.9) * vt;
+                        const latVein = document.createElementNS("http://www.w3.org/2000/svg", "path");
+                        latVein.setAttribute("d", `M ${vx} ${vy} Q ${vx + 7} ${vy - 5} ${vx + 13} ${vy - 1}`);
+                        latVein.setAttribute("stroke", "#fef08a");
+                        latVein.setAttribute("stroke-width", "0.5");
+                        latVein.setAttribute("fill", "none");
+                        latVein.setAttribute("opacity", "0.22");
+                        g.appendChild(latVein);
+                    }
+                }
+                return g;
+            }
+
+            // 3. TILED COVERAGE CLUSTERS
+            const cols = 4;
+            const rows = 6;
+            const cellW = 400 / cols;
+            const cellH = 700 / rows;
+
+            let index = 0;
+            const centerX = 200;
+            const centerY = 350;
+
+            for (let r = -1; r <= rows; r++) {
+                for (let c = -1; c <= cols; c++) {
+                    index++;
+                    const layerKey = (index % 3 === 0) ? 'front' : ((index % 2 === 0) ? 'mid' : 'back');
+                    const svgContainer = layers[layerKey];
+
+                    const posX = c * cellW + (Math.random() - 0.5) * 30;
+                    const posY = r * cellH + (Math.random() - 0.5) * 30;
+                    const clusterW = 160 + Math.random() * 50;
+                    const clusterH = 160 + Math.random() * 50;
+                    const rot = (Math.random() - 0.5) * 180;
+
+                    const clusterGroup = createBotanicalPlantCluster(clusterW, clusterH);
+                    clusterGroup.setAttribute("class", "foliage-layer-group");
+                    clusterGroup.setAttribute("transform", `translate(${posX}, ${posY}) rotate(${rot}) scale(1)`);
+                    svgContainer.appendChild(clusterGroup);
+
+                    const dx = (posX + clusterW / 2) - centerX;
+                    const dy = (posY + clusterH / 2) - centerY;
+                    const distFromCenter = Math.hypot(dx, dy);
+                    const angle = Math.atan2(dy, dx);
+
+                    const isEdge = (posX < 30 || posX > 280 || posY < 50 || posY > 580);
+                    const pushDist = isEdge ? (20 + Math.random() * 25) : (290 + Math.random() * 110);
+
+                    const moveX = Math.cos(angle) * pushDist;
+                    const moveY = Math.sin(angle) * pushDist;
+                    const delay = Math.floor(distFromCenter * 2.2 + Math.random() * 90);
+
+                    clusterNodesData.push({
+                        element: clusterGroup,
+                        origTransform: `translate(${posX}, ${posY}) rotate(${rot}) scale(1)`,
+                        openTransform: `translate(${posX + moveX}, ${posY + moveY}) rotate(${rot + (Math.random() - 0.5) * 30}) scale(${isEdge ? 1 : 0.8})`,
+                        delay: delay,
+                        isEdge: isEdge
+                    });
+                }
+            }
+
+            // 4. CENTER OCCLUSION SHIELD CLUSTERS
+            for (let k = 0; k < 6; k++) {
+                const layerKey = (k % 2 === 0) ? 'front' : 'mid';
+                const svgContainer = layers[layerKey];
+
+                const posX = 90 + (k % 3) * 80;
+                const posY = 170 + Math.floor(k / 3) * 130;
+                const clusterGroup = createBotanicalPlantCluster(170, 170);
+                clusterGroup.setAttribute("class", "foliage-layer-group");
+                clusterGroup.setAttribute("transform", `translate(${posX}, ${posY}) scale(1.3)`);
+                svgContainer.appendChild(clusterGroup);
+
+                const dx = (posX + 85) - centerX;
+                const dy = (posY + 85) - centerY;
+                const angle = Math.atan2(dy, dx);
+                const moveX = Math.cos(angle) * 340;
+                const moveY = Math.sin(angle) * 340;
+
+                clusterNodesData.push({
+                    element: clusterGroup,
+                    origTransform: `translate(${posX}, ${posY}) scale(1.3)`,
+                    openTransform: `translate(${posX + moveX}, ${posY + moveY}) scale(0.75)`,
+                    delay: 140 + k * 80,
+                    isEdge: false
+                });
+            }
+        }
+
+        /* ==========================================================================
+           CINEMATIC OPENING ANIMATION SEQUENCE
+           ========================================================================== */
+        function playCinematicOpening() {
+            const viewport = document.getElementById('opening-viewport');
+            const lightBurst = document.getElementById('opening-light-burst');
+            const apple = document.getElementById('opening-branch-apple');
+            const titleBox = document.getElementById('opening-title-container');
+
+            viewport.style.display = 'block';
+            titleBox.classList.remove('show');
+            apple.classList.remove('show');
+            lightBurst.style.opacity = '0';
+            lightBurst.style.transform = 'translate(-50%, -50%) scale(0.2)';
+
+            buildDenseWallOfFoliage();
+
+            setTimeout(() => {
+                lightBurst.style.opacity = '0.5';
+            }, 500);
+
+            setTimeout(() => {
+                lightBurst.style.opacity = '1';
+                lightBurst.style.transform = 'translate(-50%, -50%) scale(1.5)';
+                apple.classList.add('show');
+
+                clusterNodesData.forEach(node => {
+                    setTimeout(() => {
+                        node.element.style.transform = node.openTransform;
+                        if (!node.isEdge) {
+                            node.element.style.opacity = '0.08';
+                        }
+                    }, node.delay);
+                });
+            }, 1000);
+
+            setTimeout(() => {
+                titleBox.classList.add('show');
+            }, 2800);
+
+            setTimeout(() => {
+                titleBox.classList.remove('show');
+                apple.classList.remove('show');
+                lightBurst.style.opacity = '0';
+            }, 3800);
+
+            setTimeout(() => {
+                viewport.style.display = 'none';
+                audioMgr.playBGM(); // Start main Level 3 BGM seamlessly
+                showGameRules();
+            }, 4400);
+        }
+
+        /* ==========================================================================
+           DYNAMIC PLAYABLE AREA & BOUNDARY CALCULATION
+           ========================================================================== */
+        function getPlayableTopY() {
+            const bar = document.getElementById('active-question-bar');
+            const container = document.getElementById('game-container');
+            if (bar && bar.offsetWidth > 0 && window.getComputedStyle(bar).display !== 'none') {
+                const barRect = bar.getBoundingClientRect();
+                const containerRect = container.getBoundingClientRect();
+                const barBottomInContainer = barRect.bottom - containerRect.top;
+                return Math.max(90, barBottomInContainer + 15); // Dynamic gap
+            }
+            return 110;
+        }
+
+        /* ==========================================================================
+           GAME ENGINE STATE & CANVAS SETUP
+           ========================================================================== */
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let width = 0;
+        let height = 0;
+        let lastTime = 0;
+        let isPaused = false;
+        let isMoving = false;
+        let currentQuestionIdx = 0;
+        let score = 0;
+        let stars = 3;
+
+        // Snake Physics State
+        const snake = {
+            x: 0,
+            y: 0,
+            angle: -Math.PI / 2,
+            targetAngle: -Math.PI / 2,
+            baseSpeed: 135,
+            speed: 135,
+            turnSpeed: 6.8,
+            history: [],
+            targetLength: 150,
+            tongueTimer: 0
+        };
+
+        // Collectibles & Effects
+        let items = [];
+        let particles = [];
+        let ambientParticles = [];
+
+        let speedBoostTimer = 0;
+        let vineSlowTimer = 0;
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        function initCanvas() {
+            const container = document.getElementById('game-container');
+            width = container.clientWidth;
+            height = container.clientHeight;
+            canvas.width = width;
+            canvas.height = height;
+
+            ambientParticles = [];
+            for (let i = 0; i < 28; i++) {
+                ambientParticles.push({
+                    x: Math.random() * width,
+                    y: Math.random() * height,
+                    radius: Math.random() * 2.0 + 0.8,
+                    alpha: Math.random() * 0.45 + 0.15,
+                    speedY: -(Math.random() * 10 + 6),
+                    speedX: (Math.random() - 0.5) * 6
+                });
+            }
+        }
+
+        window.addEventListener('resize', () => {
+            initCanvas();
+            checkQuestionTruncation();
+            enforceSafePlayableBoundary();
+        });
+
+        function initializeGame() {
+            initCanvas();
+            score = 0;
+            stars = 3;
+            currentQuestionIdx = 0;
+            updateHUD();
+            setupControls();
+            setupExpandArrowListener();
+            setupRulesButtonListener();
+            playCinematicOpening();
+        }
+
+        /* ==========================================================================
+           GAME RULES SYSTEM
+           ========================================================================== */
+        function showGameRules() {
+            document.getElementById('rules-modal').classList.add('active');
+        }
+
+        function hideGameRules() {
+            document.getElementById('rules-modal').classList.remove('active');
+        }
+
+        function setupRulesButtonListener() {
+            const btnChallenge = document.getElementById('btn-start-challenge');
+            if (!btnChallenge) return;
+            btnChallenge.addEventListener('click', () => {
+                audioMgr.playSFX('click');
+                hideGameRules();
+                showQuestionCard(currentQuestionIdx);
+            });
+        }
+
+        /* ==========================================================================
+           QUESTION MANAGEMENT & EXPAND ARROW SYSTEM
+           ========================================================================== */
+        function setupExpandArrowListener() {
+            const btnExpand = document.getElementById('btn-toggle-expand');
+            const bar = document.getElementById('active-question-bar');
+
+            btnExpand.onclick = (e) => {
+                e.stopPropagation();
+                audioMgr.playSFX('click');
+                bar.classList.toggle('expanded');
+                btnExpand.textContent = bar.classList.contains('expanded') ? '▲' : '▼';
+
+                // Recalculate dynamic safe area immediately without pausing gameplay
+                enforceSafePlayableBoundary();
+            };
+        }
+
+        function checkQuestionTruncation() {
+            const textEl = document.getElementById('active-question-text');
+            const btnEl = document.getElementById('btn-toggle-expand');
+            const barEl = document.getElementById('active-question-bar');
+            if (!textEl || !btnEl || !barEl) return;
+
+            if (barEl.classList.contains('expanded')) {
+                btnEl.style.display = 'inline-flex';
+                btnEl.textContent = '▲';
+                return;
+            }
+
+            // Detect if question text actually overflows 2 lines
+            textEl.style.display = '-webkit-box';
+            if (textEl.scrollHeight > textEl.clientHeight + 2) {
+                btnEl.style.display = 'inline-flex';
+                btnEl.textContent = '▼';
+            } else {
+                btnEl.style.display = 'none';
+            }
+        }
+
+        function enforceSafePlayableBoundary() {
+            const topBoundary = getPlayableTopY();
+
+            // Reposition items safely if covered by expanded bar
+            items.forEach(item => {
+                if (item.y < topBoundary + 18) {
+                    repositionItem(item);
+                }
+            });
+        }
+
+        function showQuestionCard(index) {
+            isMoving = false;
+            const q = QUESTIONS_DATA[index];
+            
+            document.getElementById('modal-q-title').textContent = `第 ${index + 1} 题`;
+            document.getElementById('modal-q-text').textContent = q.question;
+            
+            const listEl = document.getElementById('modal-options-list');
+            listEl.innerHTML = '';
+            
+            q.options.forEach(opt => {
+                const optDiv = document.createElement('div');
+                optDiv.className = 'option-card-item';
+                optDiv.innerHTML = `<div class="opt-badge">${opt.letter}</div><div>${opt.text}</div>`;
+                listEl.appendChild(optDiv);
+            });
+
+            // Set text on compact header bar
+            document.getElementById('active-question-text').textContent = `${index + 1}. ${q.question.replace(/\n+/g, ' ')}`;
+            document.getElementById('opt-preview-a').textContent = `A. ${q.options[0].text}`;
+            document.getElementById('opt-preview-b').textContent = `B. ${q.options[1].text}`;
+            document.getElementById('opt-preview-c').textContent = `C. ${q.options[2].text}`;
+            document.getElementById('opt-preview-d').textContent = `D. ${q.options[3].text}`;
+
+            // Reset expansion state for new question
+            const bar = document.getElementById('active-question-bar');
+            bar.classList.remove('expanded');
+
+            document.getElementById('question-modal').classList.add('active');
+            bar.style.display = 'none';
+        }
+
+        document.getElementById('btn-start-question').addEventListener('click', () => {
+            audioMgr.playSFX('click');
+            audioMgr.playBGM(); // Maintain / resume continuous BGM
+
+            document.getElementById('question-modal').classList.remove('active');
+            const bar = document.getElementById('active-question-bar');
+            bar.style.display = 'block';
+
+            // Check if arrow is required for this question
+            setTimeout(() => {
+                checkQuestionTruncation();
+                enforceSafePlayableBoundary();
+            }, 50);
+
+            // Show 3-2-1 countdown ONLY for Question 1
+            if (currentQuestionIdx === 0) {
+                startCountdown();
+            } else {
+                // Questions 2-5 start immediately without delay
+                resetSnakePosition();
+                spawnObjects();
+                isMoving = true;
+            }
+        });
+
+        function startCountdown() {
+            const layer = document.getElementById('countdown-layer');
+            const numEl = document.getElementById('countdown-num');
+            layer.classList.add('active');
+
+            let count = 3;
+            const updateNum = () => {
+                if (count > 0) {
+                    numEl.textContent = count;
+                    numEl.classList.remove('animate');
+                    void numEl.offsetWidth;
+                    numEl.classList.add('animate');
+                    count--;
+                    setTimeout(updateNum, 750);
+                } else {
+                    numEl.textContent = "开始！";
+                    numEl.classList.remove('animate');
+                    void numEl.offsetWidth;
+                    numEl.classList.add('animate');
+                    setTimeout(() => {
+                        layer.classList.remove('active');
+                        resetSnakePosition();
+                        spawnObjects();
+                        isMoving = true;
+                    }, 550);
+                }
+            };
+            updateNum();
+        }
+
+        function resetSnakePosition() {
+            const topBoundary = getPlayableTopY();
+            snake.x = width / 2;
+            snake.y = Math.max(topBoundary + 80, height * 0.72);
+            snake.angle = -Math.PI / 2;
+            snake.targetAngle = -Math.PI / 2;
+            snake.history = [];
+            
+            for (let i = 0; i < snake.targetLength; i += 3) {
+                snake.history.push({ x: snake.x, y: snake.y + i });
+            }
+        }
+
+        /* ==========================================================================
+           OBJECT SPAWNING & SAFE POSITIONING (DYNAMIC PlayableTopY RESPECTED)
+           ========================================================================== */
+        function spawnObjects() {
+            items = [];
+            const types = ['A', 'B', 'C', 'D', 'APPLE', 'VINE_TRAP'];
+            const safeMarginX = 50;
+            const bottomMargin = 70;
+            
+            types.forEach(type => {
+                let pos = getSafePosition(safeMarginX, bottomMargin);
+                items.push({
+                    type: type,
+                    x: pos.x,
+                    y: pos.y,
+                    radius: 20,
+                    floatOffset: Math.random() * Math.PI * 2
+                });
+            });
+        }
+
+        function getSafePosition(marginX, marginBottom) {
+            let pos = { x: 0, y: 0 };
+            let valid = false;
+            let attempts = 0;
+
+            const dynamicTopY = getPlayableTopY() + 25; // Guarantee safety gap from active question bar
+
+            while (!valid && attempts < 100) {
+                attempts++;
+                pos.x = marginX + Math.random() * (width - marginX * 2);
+                pos.y = dynamicTopY + Math.random() * (height - dynamicTopY - marginBottom);
+
+                if (Math.hypot(pos.x - snake.x, pos.y - snake.y) < 95) continue;
+
+                let tooClose = false;
+                for (let item of items) {
+                    if (Math.hypot(pos.x - item.x, pos.y - item.y) < 65) {
+                        tooClose = true;
+                        break;
+                    }
+                }
+                if (!tooClose) valid = true;
+            }
+            return pos;
+        }
+
+        /* ==========================================================================
+           CONTROLS & DIRECTION SOUND LOGIC
+           ========================================================================== */
+        function changeSnakeDirection(newAngle) {
+            // Check angular difference to ensure sound is played ONLY on real successful turn
+            let diff = Math.atan2(Math.sin(newAngle - snake.targetAngle), Math.cos(newAngle - snake.targetAngle));
+            if (Math.abs(diff) > 0.25) {
+                snake.targetAngle = newAngle;
+                audioMgr.playSFX('move'); // Play move SFX once on valid turn
+            }
+        }
+
+        function setupControls() {
+            window.addEventListener('touchstart', (e) => {
+                if (!isMoving) return;
+                const touch = e.touches[0];
+                touchStartX = touch.clientX;
+                touchStartY = touch.clientY;
+            }, { passive: true });
+
+            window.addEventListener('touchmove', (e) => {
+                if (!isMoving || !touchStartX) return;
+                const touch = e.touches[0];
+                const dx = touch.clientX - touchStartX;
+                const dy = touch.clientY - touchStartY;
+                
+                if (Math.hypot(dx, dy) > 16) {
+                    const newAngle = Math.atan2(dy, dx);
+                    changeSnakeDirection(newAngle);
+                    touchStartX = touch.clientX;
+                    touchStartY = touch.clientY;
+                }
+            }, { passive: true });
+
+            const keysPressed = {};
+            window.addEventListener('keydown', (e) => {
+                keysPressed[e.key] = true;
+                handleKeyboardInput();
+            });
+
+            window.addEventListener('keyup', (e) => {
+                delete keysPressed[e.key];
+            });
+
+            function handleKeyboardInput() {
+                if (!isMoving) return;
+                let dx = 0, dy = 0;
+                if (keysPressed['ArrowUp'] || keysPressed['w'] || keysPressed['W']) dy -= 1;
+                if (keysPressed['ArrowDown'] || keysPressed['s'] || keysPressed['S']) dy += 1;
+                if (keysPressed['ArrowLeft'] || keysPressed['a'] || keysPressed['A']) dx -= 1;
+                if (keysPressed['ArrowRight'] || keysPressed['d'] || keysPressed['D']) dx += 1;
+
+                if (dx !== 0 || dy !== 0) {
+                    const newAngle = Math.atan2(dy, dx);
+                    changeSnakeDirection(newAngle);
+                }
+            }
+        }
+
+        /* ==========================================================================
+           GAME LOOP & UPDATE PHYSICS
+           ========================================================================== */
+        function gameLoop(timestamp) {
+            if (!lastTime) lastTime = timestamp;
+            const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
+            lastTime = timestamp;
+
+            if (!isPaused) {
+                update(dt);
+                render();
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function update(dt) {
+            ambientParticles.forEach(p => {
+                p.y += p.speedY * dt;
+                p.x += p.speedX * dt;
+                if (p.y < -10) { p.y = height + 10; p.x = Math.random() * width; }
+            });
+
+            if (!isMoving) return;
+
+            snake.tongueTimer += dt;
+
+            // Speed Modifier Calculation (Apple Boost vs. Vine Trap Slowdown)
+            let speedMult = 1.0;
+
+            if (speedBoostTimer > 0) {
+                speedBoostTimer -= dt;
+                speedMult *= 1.85;
+                const pct = Math.max(0, (speedBoostTimer / 2.0) * 100);
+                document.getElementById('powerup-timer-bar').style.display = 'block';
+                document.getElementById('powerup-progress').style.width = pct + '%';
+                if (speedBoostTimer <= 0) {
+                    document.getElementById('powerup-timer-bar').style.display = 'none';
+                }
+            }
+
+            if (vineSlowTimer > 0) {
+                vineSlowTimer -= dt;
+                speedMult *= 0.60; // Smooth 60% speed during Vine Trap slowdown
+            }
+
+            snake.speed = snake.baseSpeed * speedMult;
+
+            let diff = snake.targetAngle - snake.angle;
+            diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+            snake.angle += diff * Math.min(1, snake.turnSpeed * dt);
+
+            snake.x += Math.cos(snake.angle) * snake.speed * dt;
+            snake.y += Math.sin(snake.angle) * snake.speed * dt;
+
+            // Classic WRAP-AROUND / PORTAL behavior
+            const topMargin = getPlayableTopY();
+            const playAreaHeight = height - topMargin;
+
+            if (snake.x < 0) {
+                snake.x += width;
+            } else if (snake.x > width) {
+                snake.x -= width;
+            }
+
+            if (snake.y < topMargin) {
+                snake.y += playAreaHeight;
+            } else if (snake.y > height) {
+                snake.y -= playAreaHeight;
+            }
+
+            snake.history.unshift({ x: snake.x, y: snake.y });
+
+            let totalDist = 0;
+            let pruneIndex = snake.history.length;
+            for (let i = 0; i < snake.history.length - 1; i++) {
+                let dx = snake.history[i+1].x - snake.history[i].x;
+                let dy = snake.history[i+1].y - snake.history[i].y;
+                
+                // Adjust deltas for distance calculation when crossing wrap boundary
+                if (dx > width / 2) dx -= width;
+                else if (dx < -width / 2) dx += width;
+                if (dy > playAreaHeight / 2) dy -= playAreaHeight;
+                else if (dy < -playAreaHeight / 2) dy += playAreaHeight;
+
+                const d = Math.hypot(dx, dy);
+                totalDist += d;
+                if (totalDist >= snake.targetLength) {
+                    pruneIndex = i + 1;
+                    break;
+                }
+            }
+            if (pruneIndex < snake.history.length) {
+                snake.history.length = pruneIndex;
+            }
+
+            items.forEach((item) => {
+                item.floatOffset += dt * 3;
+                const floatY = (item.type === 'VINE_TRAP') ? item.y : item.y + Math.sin(item.floatOffset) * 4;
+                const dist = Math.hypot(snake.x - item.x, snake.y - floatY);
+
+                if (dist < 18 + item.radius) {
+                    handleItemCollision(item);
+                }
+            });
+
+            particles.forEach((p, index) => {
+                p.x += p.vx * dt;
+                p.y += p.vy * dt;
+                p.alpha -= dt * 1.8;
+                if (p.alpha <= 0) particles.splice(index, 1);
+            });
+        }
+
+        /* ==========================================================================
+           COLLISIONS & GAMEPLAY LOGIC
+           ========================================================================== */
+        function handleItemCollision(item) {
+            const q = QUESTIONS_DATA[currentQuestionIdx];
+
+            if (item.type === 'APPLE') {
+                activateApple();
+                repositionItem(item);
+            } else if (item.type === 'VINE_TRAP') {
+                activateVineTrap();
+                repositionItem(item);
+            } else {
+                handleAnswerChoice(item.type, q.correct);
+            }
+        }
+
+        function activateApple() {
+            audioMgr.playSFX('bite'); // BITE CRUNCH SFX
+            speedBoostTimer = 2.0;
+            score += 10;
+            updateHUD();
+            showToast('速度提升！', 'toast-speed');
+            createParticleBurst(snake.x, snake.y, '#ffd700', 16);
+        }
+
+        function activateVineTrap() {
+            audioMgr.playSFX('vine'); // RUSTLING VINE TRAP SFX ONLY
+            vineSlowTimer = 2.5; // Slow down snake for 2.5 seconds
+            showToast('被藤蔓缠住了！', 'toast-vine');
+            createParticleBurst(snake.x, snake.y, '#22c55e', 18); // Burst leaf particles
+        }
+
+        // Star loss handling & Game Over trigger
+        function checkGameOver() {
+            if (stars <= 0) {
+                stars = 0;
+                updateHUD();
+                return true;
+            }
+            return false;
+        }
+
+        function triggerGameOver() {
+            isMoving = false;
+            speedBoostTimer = 0;
+            vineSlowTimer = 0;
+            
+            // Stop BGM and play single dominant Game Over sound
+            audioMgr.stopBGM();
+            audioMgr.playSFX('gameOver');
+
+            document.getElementById('powerup-timer-bar').style.display = 'none';
+            document.getElementById('active-question-bar').style.display = 'none';
+            document.getElementById('gameover-modal').classList.add('active');
+        }
+
+        function handleAnswerChoice(chosenLetter, correctLetter) {
+            // First play the physical eating BITE sound for all answer choices
+            audioMgr.playSFX('bite');
+
+            if (chosenLetter === correctLetter) {
+                // Correct Answer Sequence: BITE -> 100ms -> SUCCESS SFX
+                setTimeout(() => {
+                    audioMgr.playSFX('correct');
+                }, 100);
+
+                isMoving = false;
+                score += 100;
+                updateHUD();
+                showToast('答对了！', 'toast-correct');
+                createParticleBurst(snake.x, snake.y, '#10b981', 30);
+
+                setTimeout(() => {
+                    currentQuestionIdx++;
+                    if (currentQuestionIdx >= QUESTIONS_DATA.length) {
+                        completeLevel3();
+                    } else {
+                        showQuestionCard(currentQuestionIdx);
+                    }
+                }, 1200);
+
+            } else {
+                // Wrong Answer Sequence: BITE -> 100ms -> WRONG SFX
+                setTimeout(() => {
+                    audioMgr.playSFX('wrong');
+                }, 100);
+
+                stars = Math.max(0, stars - 1);
+                score = Math.max(0, score - 20);
+                updateHUD();
+                showToast('答错了！', 'toast-wrong');
+                createParticleBurst(snake.x, snake.y, '#ef4444', 20);
+
+                if (checkGameOver()) {
+                    // Smooth 350ms transition so WRONG SFX flows cleanly into GAME OVER SFX
+                    setTimeout(() => {
+                        triggerGameOver();
+                    }, 350);
+                    return;
+                }
+
+                spawnObjects();
+            }
+        }
+
+        function repositionItem(item) {
+            const pos = getSafePosition(50, 70);
+            item.x = pos.x;
+            item.y = pos.y;
+        }
+
+        function showToast(text, typeClass) {
+            const toast = document.getElementById('toast-banner');
+            toast.textContent = text;
+            toast.className = `show ${typeClass}`;
+            setTimeout(() => { toast.className = ''; }, 1200);
+        }
+
+        function createParticleBurst(x, y, color, count) {
+            for (let i = 0; i < count; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = Math.random() * 150 + 40;
+                particles.push({
+                    x: x, y: y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    color: color,
+                    radius: Math.random() * 3 + 2,
+                    alpha: 1.0
+                });
+            }
+        }
+
+        function updateHUD() {
+            document.getElementById('hud-question-count').textContent = `第 ${currentQuestionIdx + 1} / 5 题`;
+            document.getElementById('hud-score-display').textContent = score;
+            let starStr = '';
+            for (let i = 0; i < 3; i++) { starStr += i < stars ? '★' : '☆'; }
+            document.getElementById('hud-stars-display').textContent = starStr;
+        }
+
+        /* ==========================================================================
+           CANVAS RENDERING (DARK BOTANICAL GARDEN ARENA & NATURAL SERPENT)
+           ========================================================================== */
+        function render() {
+            ctx.clearRect(0, 0, width, height);
+
+            // 1. Draw Gold Arena Framing Border Accent
+            drawEdenGardenBackground();
+
+            // 2. Draw Subtle Eden Ambient Light Dust
+            ambientParticles.forEach(p => {
+                ctx.save();
+                ctx.fillStyle = '#fef08a';
+                ctx.globalAlpha = p.alpha;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+
+            // 3. Draw Collectibles (A, B, C, D, Apple, Vine Trap)
+            items.forEach(item => { drawCollectible(item); });
+
+            // 4. Draw Natural Emerald/Forest Serpent Snake
+            drawSemiRealisticSnake();
+
+            // 5. Draw Particle FX
+            particles.forEach(p => {
+                ctx.save();
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = p.alpha;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            });
+        }
+
+        /* ==========================================================================
+           CANVAS ACCENT OVERLAY
+           ========================================================================== */
+        function drawEdenGardenBackground() {
+            ctx.save();
+            // Elegant Arena Framing Border Accent over level3_gameplay_bg.png
+            ctx.globalAlpha = 1.0;
+            ctx.strokeStyle = 'rgba(212, 175, 55, 0.22)';
+            ctx.lineWidth = 2.5;
+            ctx.strokeRect(10, 10, width - 20, height - 20);
+            ctx.restore();
+        }
+
+        /* ==========================================================================
+           FANTASY EDEN EMERALD PATTERNED SNAKE RENDERER
+           ========================================================================== */
+        function drawSemiRealisticSnake() {
+            if (snake.history.length < 3) return;
+
+            ctx.save();
+
+            const points = snake.history;
+            const topMargin = getPlayableTopY();
+            const playAreaHeight = height - topMargin;
+
+            // 1. Calculate cumulative distances and detect wrap-around gaps
+            const pointDistances = [0];
+            let cumulativeDist = 0;
+
+            const spans = [];
+            let currentSpan = [points[0]];
+
+            for (let i = 0; i < points.length - 1; i++) {
+                const p1 = points[i];
+                const p2 = points[i + 1];
+                let dx = p2.x - p1.x;
+                let dy = p2.y - p1.y;
+
+                if (dx > width / 2) dx -= width;
+                else if (dx < -width / 2) dx += width;
+                if (dy > playAreaHeight / 2) dy -= playAreaHeight;
+                else if (dy < -playAreaHeight / 2) dy += playAreaHeight;
+
+                const stepD = Math.hypot(dx, dy);
+                cumulativeDist += stepD;
+                pointDistances.push(cumulativeDist);
+
+                // Detect wrap jump on screen coordinates
+                if (Math.abs(p2.x - p1.x) > width / 2 || Math.abs(p2.y - p1.y) > playAreaHeight / 2) {
+                    if (currentSpan.length > 0) spans.push(currentSpan);
+                    currentSpan = [p2];
+                } else {
+                    currentSpan.push(p2);
+                }
+            }
+            if (currentSpan.length > 0) spans.push(currentSpan);
+
+            // 2. Tapered Body Width Function (Snout -> Jaw -> Neck -> Body -> Tail Tip)
+            function getSnakeBodyWidth(dist) {
+                const totalLen = snake.targetLength || 150;
+                if (dist < 10) {
+                    return 15 + (dist / 10) * 3; // 15 to 18
+                } else if (dist < 25) {
+                    return 18 + Math.sin(((dist - 10) / 15) * Math.PI / 2) * 2; // 18 to 20
+                } else if (dist < totalLen * 0.6) {
+                    let t = (dist - 25) / (totalLen * 0.6 - 25);
+                    return 20 - t * 5; // 20 down to 15
+                } else {
+                    let t = (dist - totalLen * 0.6) / (totalLen - totalLen * 0.6);
+                    t = Math.min(1, Math.max(0, t));
+                    return Math.max(2.5, 15 * (1 - t * t)); // Quadratic smooth taper to 2.5px
+                }
+            }
+
+            // 3. Soft Ground Shadow Pass
+            ctx.fillStyle = 'rgba(0, 18, 6, 0.45)';
+            spans.forEach(span => {
+                for (let k = 0; k < span.length; k++) {
+                    const pt = span[k];
+                    const origIndex = points.indexOf(pt);
+                    const dist = pointDistances[origIndex] || 0;
+                    const w = getSnakeBodyWidth(dist);
+                    ctx.beginPath();
+                    ctx.arc(pt.x + 3, pt.y + 5, (w / 2) + 1, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            });
+
+            // 4. Continuous 3D Emerald Cylindrical Body Pass
+            spans.forEach(span => {
+                for (let k = span.length - 1; k >= 1; k--) {
+                    const p1 = span[k];
+                    const p2 = span[k - 1];
+                    const d = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+                    if (d < 0.1) continue;
+
+                    const ang = Math.atan2(p1.y - p2.y, p1.x - p2.x);
+                    const idx1 = points.indexOf(p1);
+                    const idx2 = points.indexOf(p2);
+                    const dist1 = pointDistances[idx1] || 0;
+                    const dist2 = pointDistances[idx2] || 0;
+
+                    const steps = Math.max(1, Math.ceil(d / 1.8));
+                    for (let s = 0; s <= steps; s++) {
+                        const t = s / steps;
+                        const ix = p1.x + (p2.x - p1.x) * t;
+                        const iy = p1.y + (p2.y - p1.y) * t;
+                        const idist = dist1 + (dist2 - dist1) * t;
+                        const w = getSnakeBodyWidth(idist);
+
+                        const perpX = -Math.sin(ang) * (w * 0.22);
+                        const perpY = Math.cos(ang) * (w * 0.22);
+
+                        const bodyGrad = ctx.createRadialGradient(
+                            ix - perpX, iy - perpY, 1,
+                            ix, iy, w / 2
+                        );
+                        bodyGrad.addColorStop(0, '#4ade80');   // Bright jade highlight ridge
+                        bodyGrad.addColorStop(0.35, '#16a34a'); // Emerald green
+                        bodyGrad.addColorStop(0.75, '#15803d'); // Forest green
+                        bodyGrad.addColorStop(1.0, '#052e16');   // Deep shadow edge
+
+                        ctx.fillStyle = bodyGrad;
+                        ctx.beginPath();
+                        ctx.arc(ix, iy, w / 2, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                }
+            });
+
+            // 5. Pattern & Scale Markings Pass (Golden-green dorsal diamonds aligned along body curve)
+            const totalLen = cumulativeDist || snake.targetLength || 150;
+            const stepDist = 15; // Distance interval between diamonds
+            for (let d = 18; d < totalLen - 12; d += stepDist) {
+                // Find segment corresponding to distance d
+                let pIdx = 0;
+                while (pIdx < pointDistances.length - 1 && pointDistances[pIdx + 1] < d) {
+                    pIdx++;
+                }
+                if (pIdx >= points.length - 1) continue;
+
+                const p1 = points[pIdx];
+                const p2 = points[pIdx + 1];
+
+                // Check if p1 and p2 are continuous (no wrap jump)
+                if (Math.abs(p2.x - p1.x) > width / 2 || Math.abs(p2.y - p1.y) > playAreaHeight / 2) {
+                    continue;
+                }
+
+                const segD1 = pointDistances[pIdx];
+                const segD2 = pointDistances[pIdx + 1];
+                const segLen = segD2 - segD1;
+                if (segLen < 0.01) continue;
+
+                const t = (d - segD1) / segLen;
+                const px = p1.x + (p2.x - p1.x) * t;
+                const py = p1.y + (p2.y - p1.y) * t;
+                const dAng = Math.atan2(p1.y - p2.y, p1.x - p2.x);
+                const dw = getSnakeBodyWidth(d);
+
+                ctx.save();
+                ctx.translate(px, py);
+                ctx.rotate(dAng);
+
+                const rLength = dw * 0.65;
+                const rWidth = dw * 0.42;
+
+                // Dorsal Rhombus Diamond
+                ctx.beginPath();
+                ctx.moveTo(rLength, 0);
+                ctx.lineTo(0, -rWidth);
+                ctx.lineTo(-rLength, 0);
+                ctx.lineTo(0, rWidth);
+                ctx.closePath();
+
+                const dGrad = ctx.createLinearGradient(-rLength, 0, rLength, 0);
+                dGrad.addColorStop(0, '#84cc16');     // Lime / yellow-green
+                dGrad.addColorStop(0.5, '#fef08a');   // Bright golden highlight
+                dGrad.addColorStop(1, '#a3e635');     // Light golden green
+
+                ctx.fillStyle = dGrad;
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(21, 128, 61, 0.7)';
+                ctx.lineWidth = 0.8;
+                ctx.stroke();
+
+                // Inner Accent Scale Dot
+                ctx.fillStyle = '#ffffff';
+                ctx.globalAlpha = 0.65;
+                ctx.beginPath();
+                ctx.arc(0, 0, Math.max(0.8, dw * 0.1), 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.restore();
+            }
+
+            // 6. Snake Head Design
+            const headPt = points[0];
+            ctx.save();
+            ctx.translate(headPt.x, headPt.y);
+            ctx.rotate(snake.angle);
+
+            // Head Outer Shadow
+            ctx.shadowColor = 'rgba(0, 15, 5, 0.5)';
+            ctx.shadowBlur = 6;
+            ctx.shadowOffsetX = 2;
+            ctx.shadowOffsetY = 3;
+
+            // Head Contour Path (Viper/Cobra shaped)
+            ctx.beginPath();
+            ctx.moveTo(19, 0);
+            ctx.quadraticCurveTo(12, -8, 2, -11);
+            ctx.quadraticCurveTo(-8, -12, -12, -6);
+            ctx.lineTo(-12, 6);
+            ctx.quadraticCurveTo(-8, 12, 2, 11);
+            ctx.quadraticCurveTo(12, 8, 19, 0);
+            ctx.closePath();
+
+            const hGrad = ctx.createRadialGradient(4, -2, 2, 2, 0, 18);
+            hGrad.addColorStop(0, '#4ade80');
+            hGrad.addColorStop(0.4, '#16a34a');
+            hGrad.addColorStop(0.85, '#15803d');
+            hGrad.addColorStop(1, '#052e16');
+
+            ctx.fillStyle = hGrad;
+            ctx.fill();
+
+            ctx.shadowColor = 'transparent';
+            ctx.strokeStyle = '#d4af37';
+            ctx.lineWidth = 1.2;
+            ctx.stroke();
+
+            // Forehead Emblem / Crown Diamond
+            ctx.beginPath();
+            ctx.moveTo(8, 0);
+            ctx.lineTo(2, -4);
+            ctx.lineTo(-4, 0);
+            ctx.lineTo(2, 4);
+            ctx.closePath();
+            ctx.fillStyle = '#fde047';
+            ctx.fill();
+            ctx.strokeStyle = '#15803d';
+            ctx.lineWidth = 0.6;
+            ctx.stroke();
+
+            // Eyes (Right and Left)
+            [-6.5, 6.5].forEach(ey => {
+                ctx.fillStyle = '#052e16';
+                ctx.beginPath();
+                ctx.arc(6, ey, 3.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#f59e0b'; // Amber iris
+                ctx.beginPath();
+                ctx.arc(6.2, ey, 2.5, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#020617'; // Vertical slit pupil
+                ctx.beginPath();
+                ctx.ellipse(6.2, ey, 0.8, 2.0, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#ffffff'; // Specular highlight
+                ctx.beginPath();
+                ctx.arc(7.2, ey - 0.8, 0.7, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // Nostril hints
+            ctx.fillStyle = '#052e16';
+            ctx.beginPath();
+            ctx.arc(16, -2, 0.7, 0, Math.PI * 2);
+            ctx.arc(16, 2, 0.7, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Periodically Flicking Red Forked Tongue
+            if (Math.sin(snake.tongueTimer * 5.5) > 0.78) {
+                ctx.strokeStyle = '#ef4444';
+                ctx.lineWidth = 1.6;
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(18, 0);
+                ctx.lineTo(25, 0);
+                ctx.lineTo(29, -3.5);
+                ctx.moveTo(25, 0);
+                ctx.lineTo(29, 3.5);
+                ctx.stroke();
+            }
+
+            ctx.restore();
+            ctx.restore();
+        }
+
+        /* ==========================================================================
+           PROGRAMMATIC VINE TRAP RENDERER
+           ========================================================================== */
+        function drawVineTrap(item) {
+            const anim = Math.sin(item.floatOffset) * 0.15; // Subtle pulsing/breathing idle animation
+            ctx.save();
+            ctx.translate(item.x, item.y);
+            ctx.scale(1 + anim * 0.08, 1 + anim * 0.08);
+
+            // 1. Soft Shadow on Grass Ground
+            ctx.beginPath();
+            ctx.ellipse(0, 10, 20, 8, 0, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(2, 20, 8, 0.45)';
+            ctx.fill();
+
+            // 2. Tangled Vines Base (Dark green curling stems)
+            ctx.strokeStyle = '#052e16';
+            ctx.lineWidth = 4;
+            ctx.lineCap = 'round';
+
+            // Vine Loop 1
+            ctx.beginPath();
+            ctx.moveTo(-14, 6);
+            ctx.bezierCurveTo(-18, -10, -4, -18, 2, -6);
+            ctx.bezierCurveTo(8, 6, 18, -2, 14, -14);
+            ctx.stroke();
+
+            // Vine Loop 2
+            ctx.strokeStyle = '#14532d';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(12, 8);
+            ctx.bezierCurveTo(16, -6, 2, -14, -8, -4);
+            ctx.bezierCurveTo(-16, 6, -6, 14, 4, 12);
+            ctx.stroke();
+
+            // 3. Small Thorn Highlights
+            ctx.fillStyle = '#fef08a';
+            [
+                { x: -10, y: -10, r: 2.2 },
+                { x: 8, y: -10, r: 2.0 },
+                { x: -4, y: 8, r: 1.8 },
+                { x: 12, y: 2, r: 2.0 }
+            ].forEach(t => {
+                ctx.beginPath();
+                ctx.arc(t.x, t.y, t.r, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            // 4. Overlapping Leaves (Fantasy Eden Foliage)
+            const leafPositions = [
+                { x: -12, y: -6, rot: -0.8, size: 8, col: '#15803d' },
+                { x: 10, y: -8, rot: 0.6, size: 9, col: '#16a34a' },
+                { x: 0, y: -14, rot: 0.1, size: 10, col: '#15803d' },
+                { x: -8, y: 8, rot: 2.2, size: 8, col: '#22c55e' },
+                { x: 11, y: 6, rot: -2.0, size: 8.5, col: '#16a34a' },
+                { x: 2, y: 4, rot: 0.5, size: 7.5, col: '#4ade80' }
+            ];
+
+            leafPositions.forEach(lf => {
+                ctx.save();
+                ctx.translate(lf.x, lf.y);
+                ctx.rotate(lf.rot + anim * 0.15);
+
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.quadraticCurveTo(lf.size * 0.6, -lf.size * 0.8, lf.size, 0);
+                ctx.quadraticCurveTo(lf.size * 0.6, lf.size * 0.8, 0, 0);
+                ctx.fillStyle = lf.col;
+                ctx.fill();
+
+                // Leaf vein accent
+                ctx.strokeStyle = 'rgba(254, 240, 138, 0.4)';
+                ctx.lineWidth = 0.8;
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(lf.size * 0.8, 0);
+                ctx.stroke();
+
+                ctx.restore();
+            });
+
+            ctx.restore();
+        }
+
+        /* ==========================================================================
+           COLLECTIBLE OBJECTS RENDERING
+           ========================================================================== */
+        function drawCollectible(item) {
+            ctx.save();
+
+            if (item.type === 'APPLE') {
+                const floatY = item.y + Math.sin(item.floatOffset) * 4;
+                ctx.beginPath();
+                ctx.ellipse(item.x, item.y + 18, 15, 5, 0, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+                ctx.fill();
+
+                const grad = ctx.createRadialGradient(item.x - 4, floatY - 4, 2, item.x, floatY, 18);
+                grad.addColorStop(0, '#fca5a5');
+                grad.addColorStop(0.35, '#dc2626');
+                grad.addColorStop(1, '#450a0a');
+
+                ctx.beginPath();
+                ctx.arc(item.x, floatY, 16, 0, Math.PI * 2);
+                ctx.fillStyle = grad;
+                ctx.shadowColor = 'rgba(220, 38, 38, 0.5)';
+                ctx.shadowBlur = 10;
+                ctx.fill();
+
+                ctx.beginPath();
+                ctx.ellipse(item.x + 4, floatY - 16, 6, 3, Math.PI / 4, 0, Math.PI * 2);
+                ctx.fillStyle = '#15803d';
+                ctx.fill();
+
+            } else if (item.type === 'VINE_TRAP') {
+                drawVineTrap(item);
+
+            } else {
+                const floatY = item.y + Math.sin(item.floatOffset) * 4;
+                ctx.beginPath();
+                ctx.ellipse(item.x, item.y + 18, 15, 5, 0, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+                ctx.fill();
+
+                let colorStops = ['#fb7185', '#be123c', '#4c0519'];
+                let glowColor = 'rgba(190, 18, 60, 0.5)';
+
+                if (item.type === 'B') { colorStops = ['#fcd34d', '#d97706', '#78350f']; glowColor = 'rgba(217, 119, 6, 0.5)'; }
+                if (item.type === 'C') { colorStops = ['#60a5fa', '#1d4ed8', '#1e3a8a']; glowColor = 'rgba(29, 78, 216, 0.5)'; }
+                if (item.type === 'D') { colorStops = ['#c084fc', '#7e22ce', '#3b0764']; glowColor = 'rgba(126, 34, 206, 0.5)'; }
+
+                const orbGrad = ctx.createRadialGradient(item.x - 5, floatY - 5, 2, item.x, floatY, 20);
+                orbGrad.addColorStop(0, colorStops[0]);
+                orbGrad.addColorStop(0.5, colorStops[1]);
+                orbGrad.addColorStop(1, colorStops[2]);
+
+                ctx.beginPath();
+                ctx.arc(item.x, floatY, 18, 0, Math.PI * 2);
+                ctx.fillStyle = orbGrad;
+                ctx.strokeStyle = '#d4af37'; 
+                ctx.lineWidth = 2;
+                ctx.shadowColor = glowColor;
+                ctx.shadowBlur = 8;
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '900 16px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.shadowColor = 'rgba(0,0,0,0.8)';
+                ctx.shadowBlur = 4;
+                ctx.fillText(item.type, item.x, floatY + 1);
+            }
+
+            ctx.restore();
+        }
+
+        /* ==========================================================================
+           MODAL MENUS & NAVIGATION (PAUSE / VICTORY / MAP PROGRESSION)
+           ========================================================================== */
+        document.getElementById('btn-pause').addEventListener('click', () => {
+            audioMgr.playSFX('click');
+            isPaused = true;
+            audioMgr.pauseBGM(); // Pause background music cleanly
+            document.getElementById('pause-modal').classList.add('active');
+        });
+
+        document.getElementById('btn-resume').addEventListener('click', () => {
+            audioMgr.playSFX('click');
+            isPaused = false;
+            audioMgr.resumeBGM(); // Resume BGM from previous playback position
+            document.getElementById('pause-modal').classList.remove('active');
+        });
+
+        document.getElementById('btn-restart').addEventListener('click', () => {
+            audioMgr.playSFX('click');
+            document.getElementById('pause-modal').classList.remove('active');
+            audioMgr.playBGM();
+            restartLevel3();
+        });
+
+        document.getElementById('btn-restart-gameover').addEventListener('click', () => {
+            audioMgr.playSFX('click');
+            document.getElementById('gameover-modal').classList.remove('active');
+            audioMgr.playBGM();
+            restartLevel3();
+        });
+
+        document.getElementById('btn-quit').addEventListener('click', () => {
+            audioMgr.playSFX('click');
+            window.location.href = 'index.html';
+        });
+
+        document.getElementById('btn-victory-map').addEventListener('click', () => {
+            audioMgr.playSFX('click');
+            saveLevel3Progression();
+            window.location.href = 'index.html';
+        });
+
+        /* ==========================================================================
+           ROBUST LEVEL 3 COMPLETION & LEVEL 4 UNLOCK PROGRESSION SYSTEM
+           ========================================================================== */
+        function saveLevel3Progression() {
+            const STORAGE_KEY = 'game_level_progression_v1';
+            try {
+                let progress = null;
+                const saved = localStorage.getItem(STORAGE_KEY);
+                if (saved) {
+                    try {
+                        progress = JSON.parse(saved);
+                    } catch (e) {
+                        console.error("Error parsing game_level_progression_v1", e);
+                    }
+                }
+
+                if (!progress || typeof progress !== 'object') {
+                    progress = {
+                        levels: {
+                            1: { unlocked: true, completed: false, stars: 0, score: 0 }
+                        },
+                        achievements: [],
+                        stats: {
+                            totalScore: 0,
+                            levelsCompleted: 0
+                        }
+                    };
+                }
+
+                if (!progress.levels) {
+                    progress.levels = {};
+                }
+
+                // Level 3 details (unlocked and completed)
+                if (!progress.levels[3]) {
+                    progress.levels[3] = {};
+                }
+                progress.levels[3].unlocked = true;
+                progress.levels[3].completed = true;
+                progress.levels[3].score = score;
+                progress.levels[3].stars = stars;
+
+                // Level 4 details (unlocked, not completed)
+                if (!progress.levels[4]) {
+                    progress.levels[4] = {};
+                }
+                progress.levels[4].unlocked = true;
+                if (progress.levels[4].completed === undefined) {
+                    progress.levels[4].completed = false;
+                }
+
+                // Recalculate stats dynamically matching index.html logic
+                if (!progress.stats) {
+                    progress.stats = { totalScore: 0, levelsCompleted: 0 };
+                }
+
+                let totalScore = 0;
+                let completedCount = 0;
+                Object.keys(progress.levels).forEach(k => {
+                    const lvl = progress.levels[k];
+                    if (lvl && lvl.completed) completedCount++;
+                    if (lvl && lvl.score) totalScore += lvl.score;
+                });
+                progress.stats.totalScore = totalScore;
+                progress.stats.levelsCompleted = completedCount;
+
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+
+                // Backward compatibility keys
+                localStorage.setItem('level3_completed', 'true');
+                localStorage.setItem('level_3_complete', 'true');
+                localStorage.setItem('level3_complete', 'true');
+                localStorage.setItem('level3Completed', 'true');
+
+                let currentUnlocked = parseInt(localStorage.getItem('unlockedLevel') || '0', 10);
+                if (isNaN(currentUnlocked) || currentUnlocked < 4) {
+                    localStorage.setItem('unlockedLevel', '4');
+                }
+
+                let maxLevel = parseInt(localStorage.getItem('maxLevel') || '0', 10);
+                if (isNaN(maxLevel) || maxLevel < 4) {
+                    localStorage.setItem('maxLevel', '4');
+                }
+
+                let userLevel = parseInt(localStorage.getItem('userLevel') || '0', 10);
+                if (isNaN(userLevel) || userLevel < 4) {
+                    localStorage.setItem('userLevel', '4');
+                }
+
+                ['gameProgress', 'game_progress', 'educational_game_progress'].forEach(key => {
+                    try {
+                        let prog = JSON.parse(localStorage.getItem(key) || '{}');
+                        if (typeof prog === 'object') {
+                            prog.level3 = { completed: true, score: score, stars: stars };
+                            prog.level3_completed = true;
+                            if (!prog.unlockedLevel || prog.unlockedLevel < 4) {
+                                prog.unlockedLevel = 4;
+                            }
+                            localStorage.setItem(key, JSON.stringify(prog));
+                        }
+                    } catch(e) {}
+                });
+
+            } catch (e) {
+                console.warn("localStorage progression save error:", e);
+            }
+        }
+
+        function completeLevel3() {
+            isMoving = false;
+            
+            // Stop BGM and play Victory SFX ONCE
+            audioMgr.stopBGM();
+            audioMgr.playSFX('victory');
+
+            saveLevel3Progression();
+
+            document.getElementById('active-question-bar').style.display = 'none';
+            document.getElementById('victory-score').textContent = score;
+
+            let starStr = '';
+            for (let i = 0; i < 3; i++) { starStr += i < stars ? '★' : '☆'; }
+            document.getElementById('victory-stars').textContent = starStr;
+
+            setTimeout(() => {
+                document.getElementById('victory-modal').classList.add('active');
+            }, 600);
+        }
+
+        function restartLevel3() {
+            isPaused = false;
+            isMoving = false;
+            speedBoostTimer = 0;
+            vineSlowTimer = 0;
+            document.getElementById('powerup-timer-bar').style.display = 'none';
+            document.getElementById('victory-modal').classList.remove('active');
+            document.getElementById('pause-modal').classList.remove('active');
+            document.getElementById('gameover-modal').classList.remove('active');
+            hideGameRules();
+
+            score = 0;
+            stars = 3;
+            currentQuestionIdx = 0;
+            updateHUD();
+            showGameRules();
+        }
+
+        window.addEventListener('load', () => {
+            initializeGame();
+            requestAnimationFrame(gameLoop);
+        });
+    </script>
+</body>
+</html>
