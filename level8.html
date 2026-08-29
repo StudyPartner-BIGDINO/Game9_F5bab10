@@ -1,0 +1,1766 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>LEVEL 8 - 历史之绳</title>
+    <style>
+        /* ==================================================
+           RESET & VIEWPORT SCROLL LOCK
+           ================================================== */
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            position: fixed;
+            inset: 0;
+            overflow: hidden;
+            background-color: #080c14;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: #ffffff;
+            padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+        }
+
+        /* ==================================================
+           DYNAMIC RESPONSIVE 9:16 CONTAINER (710 x 1116)
+           ================================================== */
+        #game-wrapper {
+            position: absolute;
+            width: 710px;
+            height: 1116px;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%) scale(1);
+            transform-origin: center center;
+            background: radial-gradient(circle at center, #1e1b4b 0%, #0f172a 60%, #080c14 100%);
+            overflow: hidden;
+            box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
+            border-radius: 16px;
+            will-change: transform;
+        }
+
+        /* ==================================================
+           SVG ROPE CANVAS & EFFECTS
+           ================================================== */
+        #rope-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 15;
+            pointer-events: none;
+        }
+
+        #effects-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 50;
+            pointer-events: none;
+        }
+
+        /* ==================================================
+           GAME UI LAYOUT
+           ================================================== */
+        #ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 20;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 16px;
+        }
+
+        /* TOP BAR (17px Badge / 13px Labels / 18px Values) */
+        .top-bar {
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(15, 23, 42, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 0 16px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+            z-index: 30;
+        }
+
+        .level-badge {
+            font-size: 17px;
+            font-weight: 800;
+            color: #38bdf8;
+            letter-spacing: 1px;
+            background: rgba(56, 189, 248, 0.15);
+            padding: 6px 12px;
+            border-radius: 8px;
+            border: 1px solid rgba(56, 189, 248, 0.3);
+        }
+
+        .stats-group {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .stat-box {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: #94a3b8;
+            text-transform: uppercase;
+            margin-bottom: 1px;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #f8fafc;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .action-btns {
+            display: flex;
+            gap: 8px;
+        }
+
+        .icon-btn {
+            width: 38px;
+            height: 38px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #ffffff;
+            font-size: 15px;
+            font-weight: bold;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .icon-btn:active {
+            transform: scale(0.92);
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        /* ==================================================
+           OPTIMIZED MOBILE PUZZLE GRID (29% - 44% - 27%)
+           ================================================== */
+        .puzzle-container {
+            flex: 1;
+            display: flex;
+            justify-content: space-between;
+            margin: 10px 0;
+            position: relative;
+        }
+
+        /* Central Rope Arena Background Highlight (44% Width) */
+        .rope-arena-bg {
+            position: absolute;
+            top: 0;
+            left: 29%;
+            width: 44%;
+            height: 100%;
+            pointer-events: none;
+            background: radial-gradient(ellipse at center, rgba(56, 189, 248, 0.14) 0%, rgba(15, 23, 42, 0) 80%);
+            border-left: 1px dashed rgba(255, 255, 255, 0.1);
+            border-right: 1px dashed rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            z-index: 5;
+        }
+
+        /* COLUMNS */
+        .column {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 100%;
+            position: relative;
+            z-index: 25;
+        }
+
+        /* Left Column: 29% Width */
+        .left-col {
+            width: 29%;
+        }
+
+        /* Right Column: 27% Width */
+        .right-col {
+            width: 27%;
+        }
+
+        /* CARDS & SLOTS */
+        .card {
+            position: relative;
+            background: rgba(15, 23, 42, 0.88);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            transition: border-color 0.3s, transform 0.2s, box-shadow 0.3s;
+        }
+
+        /* QUESTION CARD */
+        .question-card {
+            min-height: calc((100% - 5 * 8px) / 6);
+            height: auto;
+            border-left: 3.5px solid #38bdf8;
+            padding: 5px 8px;
+        }
+
+        /* QUESTION LABEL: 12px */
+        .question-num {
+            font-size: 12px;
+            font-weight: 800;
+            color: #38bdf8;
+            margin-bottom: 2px;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        /* QUESTION TEXT: 14.5px */
+        .question-text {
+            font-size: 14.5px;
+            line-height: 1.35;
+            font-weight: 500;
+            color: #f8fafc;
+            word-break: break-word;
+        }
+
+        /* ANSWER CARD & SLOTS (Flexbox Centered) */
+        .answer-slot {
+            height: calc((100% - 6 * 6px) / 7);
+            background: rgba(255, 255, 255, 0.95);
+            color: #0f172a;
+            border: 2px solid transparent;
+            padding: 4px 8px 4px 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        /* EMPTY SLOT WITH SUBTLE BLUE GLOW */
+        .answer-slot.empty-slot {
+            background: rgba(56, 189, 248, 0.08);
+            border: 2px dashed rgba(56, 189, 248, 0.6);
+            box-shadow: 0 0 14px rgba(56, 189, 248, 0.3);
+            color: #38bdf8;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        /* EMPTY SLOT LABEL: 15px */
+        .empty-slot-label {
+            font-size: 15px;
+            font-weight: 800;
+            letter-spacing: 0.5px;
+            color: #38bdf8;
+            text-align: center;
+            width: 100%;
+        }
+
+        /* ANSWER TEXT: 15px (Font Weight 700) */
+        .answer-text {
+            font-size: 15px;
+            font-weight: 700;
+            line-height: 1.3;
+            color: #0f172a;
+            width: 100%;
+            text-align: center;
+            word-break: break-word;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* ANCHOR POINTS */
+        .anchor-point {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #ffffff;
+            border: 3px solid #0f172a;
+            box-shadow: 0 0 10px rgba(0,0,0,0.6);
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 30;
+        }
+
+        .question-card .anchor-point {
+            right: -8px;
+        }
+
+        .answer-slot .anchor-point {
+            left: -8px;
+        }
+
+        /* FULL WIDTH BOTTOM TOOLBAR */
+        .bottom-bar {
+            height: 52px;
+            display: flex;
+            z-index: 30;
+        }
+
+        /* PRIMARY BUTTON: 20px */
+        .btn-primary {
+            width: 100%;
+            flex: 1;
+            background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
+            border: none;
+            border-radius: 14px;
+            color: #ffffff;
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            cursor: pointer;
+            box-shadow: 0 6px 20px rgba(6, 182, 212, 0.4);
+            transition: all 0.2s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .btn-primary:active {
+            transform: translateY(2px);
+            box-shadow: 0 2px 10px rgba(6, 182, 212, 0.4);
+        }
+
+        /* ==================================================
+           MODALS & OVERLAYS (Unified Typography)
+           ================================================== */
+        .modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(8, 12, 20, 0.88);
+            backdrop-filter: blur(16px);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 32px;
+            text-align: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+        }
+
+        .modal-overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* INTRO MODAL */
+        .intro-title-sub {
+            font-size: 16px;
+            color: #38bdf8;
+            font-weight: 800;
+            letter-spacing: 3px;
+            margin-bottom: 8px;
+        }
+
+        .intro-title {
+            font-size: 38px;
+            font-weight: 900;
+            color: #ffffff;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
+        }
+
+        .intro-desc {
+            font-size: 17px;
+            color: #cbd5e1;
+            line-height: 1.6;
+            margin-bottom: 40px;
+            max-width: 85%;
+        }
+
+        .btn-large {
+            width: 80%;
+            height: 56px;
+            background: linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%);
+            border: none;
+            border-radius: 16px;
+            color: #ffffff;
+            font-size: 20px;
+            font-weight: 800;
+            letter-spacing: 2px;
+            cursor: pointer;
+            box-shadow: 0 8px 25px rgba(6, 182, 212, 0.4);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn-large:active {
+            transform: scale(0.96);
+        }
+
+        /* RESULT MODAL */
+        .result-card {
+            background: rgba(30, 41, 59, 0.9);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 24px;
+            padding: 28px 24px;
+            width: 100%;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .stars-container {
+            display: flex;
+            gap: 12px;
+            margin: 16px 0 24px 0;
+        }
+
+        .star {
+            font-size: 44px;
+            color: #334155;
+            transition: color 0.4s ease, transform 0.4s ease;
+        }
+
+        .star.earned {
+            color: #facc15;
+            text-shadow: 0 0 15px rgba(250, 204, 21, 0.6);
+            transform: scale(1.1);
+        }
+
+        .result-stats {
+            width: 100%;
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 14px;
+            padding: 18px;
+            margin-bottom: 24px;
+        }
+
+        .result-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+
+        .result-row:last-child {
+            margin-bottom: 0;
+        }
+
+        .result-label {
+            color: #94a3b8;
+        }
+
+        .result-val {
+            font-weight: 700;
+            color: #f8fafc;
+            font-size: 17px;
+        }
+
+        /* TOAST NOTIFICATION: 16px Bold */
+        #toast {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%) translateY(-20px);
+            background: rgba(239, 68, 68, 0.95);
+            color: #ffffff;
+            padding: 12px 24px;
+            border-radius: 24px;
+            font-size: 16px;
+            font-weight: 800;
+            box-shadow: 0 4px 18px rgba(239, 68, 68, 0.45);
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s ease;
+            z-index: 80;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        #toast.active {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+        }
+
+        /* SHAKE ANIMATION */
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-6px); }
+            40%, 80% { transform: translateX(6px); }
+        }
+
+        .shake {
+            animation: shake 0.4s ease;
+        }
+
+        /* PULSE ANIMATION FOR CORRECT CONNECT */
+        @keyframes pulseGlow {
+            0% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.6); }
+            70% { box-shadow: 0 0 0 10px rgba(74, 222, 128, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(74, 222, 128, 0); }
+        }
+
+        .correct-pulse {
+            animation: pulseGlow 1s ease infinite;
+            border-color: #4ade80 !important;
+        }
+
+        /* LARGER DISPLAYS TYPOGRAPHY ENHANCEMENT */
+        @media (min-width: 600px) {
+            .question-text {
+                font-size: 15px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="game-wrapper">
+        <!-- SVG Canvas for Drawing Bezier Ropes -->
+        <svg id="rope-canvas">
+            <defs>
+                <filter id="rope-shadow" x="-30%" y="-30%" width="160%" height="160%">
+                    <feDropShadow dx="2" dy="5" stdDeviation="4" flood-color="#000000" flood-opacity="0.75"/>
+                </filter>
+                <filter id="glow-effect" x="-40%" y="-40%" width="180%" height="180%">
+                    <feGaussianBlur stdDeviation="5" result="blur"/>
+                    <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+                </filter>
+                <filter id="drag-glow" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur stdDeviation="8" result="blur"/>
+                    <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+                </filter>
+                <filter id="incorrect-glow" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur stdDeviation="6" result="blur"/>
+                    <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+                </filter>
+            </defs>
+            <g id="ropes-layer"></g>
+        </svg>
+
+        <!-- Canvas for Particles & Confetti -->
+        <canvas id="effects-canvas"></canvas>
+
+        <!-- Notification Toast -->
+        <div id="toast">【还有一些绳子连接错了，请继续调整！】</div>
+
+        <!-- Gameplay UI Layer -->
+        <div id="ui-layer">
+            <!-- Top Bar -->
+            <div class="top-bar">
+                <div class="level-badge">LEVEL 8</div>
+                <div class="stats-group">
+                    <div class="stat-box">
+                        <span class="stat-label">时间</span>
+                        <span class="stat-value" id="timer-text">00:00</span>
+                    </div>
+                    <div class="stat-box">
+                        <span class="stat-label">移动</span>
+                        <span class="stat-value" id="moves-text">0</span>
+                    </div>
+                </div>
+                <div class="action-btns">
+                    <button class="icon-btn" id="btn-pause" title="暂停">❚❚</button>
+                    <button class="icon-btn" id="btn-restart" title="重新开始">↺</button>
+                </div>
+            </div>
+
+            <!-- Puzzle Container (29% - 44% - 27%) -->
+            <div class="puzzle-container">
+                <div class="rope-arena-bg"></div>
+
+                <!-- Left Column: 6 Question Cards (29% Width) -->
+                <div class="column left-col" id="questions-column"></div>
+
+                <!-- Right Column: 6 Answer Cards + 1 Empty Slot (27% Width) -->
+                <div class="column right-col" id="answers-column"></div>
+            </div>
+
+            <!-- Full Width Bottom Bar -->
+            <div class="bottom-bar">
+                <button class="btn-primary" id="btn-check">【检查答案】</button>
+            </div>
+        </div>
+
+        <!-- Intro Modal Overlay -->
+        <div class="modal-overlay active" id="intro-modal">
+            <div class="intro-title-sub">LEVEL 8</div>
+            <div class="intro-title">《解开历史之绳》</div>
+            <div class="intro-desc">
+                解开缠绕的绳索，<br>寻找每一道历史题目的正确答案。
+            </div>
+            <button class="btn-large" id="btn-start">【开始挑战】</button>
+        </div>
+
+        <!-- Pause Modal Overlay -->
+        <div class="modal-overlay" id="pause-modal">
+            <div class="intro-title" style="font-size: 36px; margin-bottom: 30px;">游戏暂停</div>
+            <button class="btn-large" id="btn-resume" style="font-size: 20px; margin-bottom: 16px;">继续</button>
+            <button class="btn-large" id="btn-pause-restart" style="font-size: 20px; background: rgba(255,255,255,0.1); box-shadow: none;">重新开始</button>
+        </div>
+
+        <!-- Result Screen Overlay -->
+        <div class="modal-overlay" id="result-modal">
+            <div class="result-card">
+                <div class="intro-title-sub" style="font-size: 16px;">LEVEL 8 完成</div>
+                <div style="font-size: 28px; font-weight: 800; color: #fff;">挑战成功！</div>
+                
+                <div class="stars-container">
+                    <span class="star" id="star-1">★</span>
+                    <span class="star" id="star-2">★</span>
+                    <span class="star" id="star-3">★</span>
+                </div>
+
+                <div class="result-stats">
+                    <div class="result-row">
+                        <span class="result-label">完成时间</span>
+                        <span class="result-val" id="res-time">00:00</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">使用移动次数</span>
+                        <span class="result-val" id="res-moves">0 次</span>
+                    </div>
+                    <div class="result-row">
+                        <span class="result-label">获得星级</span>
+                        <span class="result-val" id="res-stars">3 星</span>
+                    </div>
+                </div>
+
+                <button class="btn-large" id="btn-next" style="font-size: 20px;">【返回地图】</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ==================================================
+         DYNAMIC RESPONSIVE 9:16 SCALING ENGINE
+         ================================================== -->
+    <script>
+        function updateGameScale() {
+            const wrapper = document.getElementById('game-wrapper');
+            if (!wrapper) return;
+
+            const vw = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+            const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+
+            const targetW = 710;
+            const targetH = 1116;
+
+            // Proportional scale factor preserving 9:16 aspect ratio
+            const scale = Math.min(vw / targetW, vh / targetH);
+
+            wrapper.style.transform = `translate(-50%, -50%) scale(${scale})`;
+        }
+
+        window.addEventListener('resize', updateGameScale);
+        window.addEventListener('orientationchange', () => setTimeout(updateGameScale, 100));
+        if (window.visualViewport) {
+            window.visualViewport.addEventListener('resize', updateGameScale);
+            window.visualViewport.addEventListener('scroll', updateGameScale);
+        }
+        document.addEventListener('DOMContentLoaded', updateGameScale);
+    </script>
+
+    <!-- ==================================================
+         JAVASCRIPT GAME ENGINE
+         ================================================== -->
+    <script>
+        /**
+         * AUDIO MANAGER
+         */
+        class AudioManager {
+            constructor() {
+                this.bgm = new Audio('level8_bgm.mp3');
+                this.bgm.loop = true;
+                this.bgm.volume = 0;
+
+                this.sfxTick = new Audio('level8_tick.mp3');
+                this.sfxPull = new Audio('level8_pull_rope.mp3');
+                this.sfxSnap = new Audio('level8_confirm_tap.mp3');
+                this.sfxWrong = new Audio('level8_wrong.wav');
+                this.sfxSuccess = new Audio('game-level-completed.wav');
+
+                this.lastPullTime = 0;
+                this.fadeBgmInterval = null;
+
+                this.initWebAudio();
+            }
+
+            playBGM() {
+                if (!this.bgm) return;
+                this.bgm.play().then(() => {
+                    this.fadeInBGM(0.8);
+                }).catch(err => {
+                    console.warn("BGM autoplay postponed:", err);
+                });
+            }
+
+            pauseBGM() {
+                if (this.bgm) {
+                    this.bgm.pause();
+                }
+            }
+
+            resumeBGM() {
+                if (this.bgm) {
+                    this.bgm.play().catch(e => {});
+                }
+            }
+
+            stopBGM() {
+                if (this.bgm) {
+                    this.bgm.pause();
+                    this.bgm.currentTime = 0;
+                }
+            }
+
+            fadeInBGM(durationSec = 0.8) {
+                if (this.fadeBgmInterval) clearInterval(this.fadeBgmInterval);
+                const targetVol = 0.4;
+                const stepTime = 50;
+                const steps = (durationSec * 1000) / stepTime;
+                let currentStep = 0;
+
+                this.fadeBgmInterval = setInterval(() => {
+                    currentStep++;
+                    this.bgm.volume = Math.min(targetVol, (currentStep / steps) * targetVol);
+                    if (currentStep >= steps) {
+                        clearInterval(this.fadeBgmInterval);
+                    }
+                }, stepTime);
+            }
+
+            playTick() {
+                this.playSingleSfx(this.sfxTick, 'button');
+            }
+
+            playPull() {
+                const now = performance.now();
+                if (now - this.lastPullTime > 250) {
+                    this.lastPullTime = now;
+                    this.playSingleSfx(this.sfxPull, 'drag');
+                }
+            }
+
+            stopPull() {
+                if (this.sfxPull) {
+                    this.sfxPull.pause();
+                    this.sfxPull.currentTime = 0;
+                }
+            }
+
+            playSnap() {
+                this.playSingleSfx(this.sfxSnap, 'drop');
+            }
+
+            playWrong() {
+                this.playSingleSfx(this.sfxWrong, 'warning');
+            }
+
+            playSuccess() {
+                this.stopBGM();
+                this.playSingleSfx(this.sfxSuccess, 'success');
+            }
+
+            playSingleSfx(audioObj, synthFallbackType) {
+                if (audioObj) {
+                    try {
+                        audioObj.currentTime = 0;
+                        const p = audioObj.play();
+                        if (p !== undefined) {
+                            p.catch(() => {
+                                this.playSynthFallback(synthFallbackType);
+                            });
+                        }
+                    } catch (e) {
+                        this.playSynthFallback(synthFallbackType);
+                    }
+                } else {
+                    this.playSynthFallback(synthFallbackType);
+                }
+            }
+
+            initWebAudio() {
+                try {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) {
+                        this.audioCtx = new AudioContext();
+                    }
+                } catch(e) {}
+            }
+
+            playSynthFallback(type) {
+                if (!this.audioCtx) return;
+                if (this.audioCtx.state === 'suspended') {
+                    this.audioCtx.resume();
+                }
+
+                const now = this.audioCtx.currentTime;
+                switch (type) {
+                    case 'button': {
+                        const osc = this.audioCtx.createOscillator();
+                        const gain = this.audioCtx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(400, now);
+                        osc.frequency.exponentialRampToValueAtTime(800, now + 0.08);
+                        gain.gain.setValueAtTime(0.15, now);
+                        gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
+                        osc.connect(gain);
+                        gain.connect(this.audioCtx.destination);
+                        osc.start(now);
+                        osc.stop(now + 0.08);
+                        break;
+                    }
+                    case 'drag': {
+                        const osc = this.audioCtx.createOscillator();
+                        const gain = this.audioCtx.createGain();
+                        osc.type = 'triangle';
+                        osc.frequency.setValueAtTime(250, now);
+                        osc.frequency.linearRampToValueAtTime(180, now + 0.06);
+                        gain.gain.setValueAtTime(0.08, now);
+                        gain.gain.linearRampToValueAtTime(0.01, now + 0.06);
+                        osc.connect(gain);
+                        gain.connect(this.audioCtx.destination);
+                        osc.start(now);
+                        osc.stop(now + 0.06);
+                        break;
+                    }
+                    case 'drop': {
+                        const osc = this.audioCtx.createOscillator();
+                        const gain = this.audioCtx.createGain();
+                        osc.type = 'sine';
+                        osc.frequency.setValueAtTime(150, now);
+                        osc.frequency.exponentialRampToValueAtTime(60, now + 0.12);
+                        gain.gain.setValueAtTime(0.2, now);
+                        gain.gain.linearRampToValueAtTime(0.01, now + 0.12);
+                        osc.connect(gain);
+                        gain.connect(this.audioCtx.destination);
+                        osc.start(now);
+                        osc.stop(now + 0.12);
+                        break;
+                    }
+                    case 'warning': {
+                        const osc = this.audioCtx.createOscillator();
+                        const gain = this.audioCtx.createGain();
+                        osc.type = 'sawtooth';
+                        osc.frequency.setValueAtTime(140, now);
+                        osc.frequency.setValueAtTime(110, now + 0.1);
+                        gain.gain.setValueAtTime(0.2, now);
+                        gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+                        osc.connect(gain);
+                        gain.connect(this.audioCtx.destination);
+                        osc.start(now);
+                        osc.stop(now + 0.25);
+                        break;
+                    }
+                    case 'success': {
+                        const notes = [523.25, 659.25, 783.99, 1046.50];
+                        notes.forEach((freq, idx) => {
+                            const osc = this.audioCtx.createOscillator();
+                            const gain = this.audioCtx.createGain();
+                            osc.type = 'sine';
+                            osc.frequency.setValueAtTime(freq, now + idx * 0.1);
+                            gain.gain.setValueAtTime(0.2, now + idx * 0.1);
+                            gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.1 + 0.4);
+                            osc.connect(gain);
+                            gain.connect(this.audioCtx.destination);
+                            osc.start(now + idx * 0.1);
+                            osc.stop(now + idx * 0.1 + 0.4);
+                        });
+                        break;
+                    }
+                }
+            }
+        }
+
+        /**
+         * QUESTION DATA (Bahasa Melayu)
+         */
+        const QUESTIONS_DATA = [
+            {
+                id: 1,
+                question: "Antara berikut, negara manakah terlibat dalam tuntutan Kepulauan Spratly?",
+                answer: "Semua di atas"
+            },
+            {
+                id: 2,
+                question: "Mengapakah Malaysia menjadi lokasi transit bagi pemerdagangan orang?",
+                answer: "Kedudukannya yang strategik di Asia Tenggara"
+            },
+            {
+                id: 3,
+                question: "Apakah matlamat AFTA terhadap kawasan ASEAN?",
+                answer: "Menjadikannya tempat produksi yang kompetitif"
+            },
+            {
+                id: 4,
+                question: "Apakah antara bantuan yang disalurkan oleh Cinta Gaza Malaysia kepada penduduk Gaza?",
+                answer: "Bantuan kepada kanak-kanak, ibu tunggal dan warga emas"
+            },
+            {
+                id: 5,
+                question: "Apakah nama program pendidikan percuma untuk anak-anak pelarian Syria yang ditubuhkan oleh Cinta Syria Malaysia?",
+                answer: "Sekolah KITA"
+            },
+            {
+                id: 6,
+                question: "Apakah yang menyebabkan rakyat Syria mengalami kesengsaraan sejak tahun 2011?",
+                answer: "Krisis politik"
+            }
+        ];
+
+        const ROPE_COLORS = [
+            { name: "Red", stroke: "#ff4d4d", highlight: "#fca5a5" },
+            { name: "Blue", stroke: "#38bdf8", highlight: "#bae6fd" },
+            { name: "Green", stroke: "#4ade80", highlight: "#bbf7d0" },
+            { name: "Yellow", stroke: "#facc15", highlight: "#fef08a" },
+            { name: "Purple", stroke: "#c084fc", highlight: "#f3e8ff" },
+            { name: "Orange", stroke: "#fb923c", highlight: "#ffedd5" }
+        ];
+
+        /**
+         * INTERSECTION DETECTOR
+         */
+        class IntersectionDetector {
+            static getCurvePoints(p0, p1, p2, p3, samples = 20) {
+                const points = [];
+                for (let i = 0; i <= samples; i++) {
+                    const t = i / samples;
+                    const cx = 3 * (p1.x - p0.x);
+                    const bx = 3 * (p2.x - p1.x) - cx;
+                    const ax = p3.x - p0.x - cx - bx;
+
+                    const cy = 3 * (p1.y - p0.y);
+                    const by = 3 * (p2.y - p1.y) - cy;
+                    const ay = p3.y - p0.y - cy - by;
+
+                    const x = ((ax * t + bx) * t + cx) * t + p0.x;
+                    const y = ((ay * t + by) * t + cy) * t + p0.y;
+                    points.push({ x, y });
+                }
+                return points;
+            }
+
+            static lineIntersect(p0, p1, p2, p3) {
+                const s1_x = p1.x - p0.x;
+                const s1_y = p1.y - p0.y;
+                const s2_x = p3.x - p2.x;
+                const s2_y = p3.y - p2.y;
+
+                const s = (-s1_y * (p0.x - p2.x) + s1_x * (p0.y - p2.y)) / (-s2_x * s1_y + s1_x * s2_y);
+                const t = ( s2_x * (p0.y - p2.y) - s2_y * (p0.x - p2.x)) / (-s2_x * s1_y + s1_x * s2_y);
+
+                return (s >= 0 && s <= 1 && t >= 0 && t <= 1);
+            }
+
+            static countRopeCrossings(allRopePoints) {
+                let crossings = 0;
+                for (let i = 0; i < allRopePoints.length; i++) {
+                    for (let j = i + 1; j < allRopePoints.length; j++) {
+                        const ptsA = allRopePoints[i];
+                        const ptsB = allRopePoints[j];
+                        for (let k = 0; k < ptsA.length - 1; k++) {
+                            for (let m = 0; m < ptsB.length - 1; m++) {
+                                if (this.lineIntersect(ptsA[k], ptsA[k+1], ptsB[m], ptsB[m+1])) {
+                                    crossings++;
+                                }
+                            }
+                        }
+                    }
+                }
+                return crossings;
+            }
+        }
+
+        /**
+         * GAME ENGINE MAIN CLASS
+         */
+        class GameEngine {
+            constructor() {
+                this.audio = new AudioManager();
+                this.wrapper = document.getElementById('game-wrapper');
+                this.svgCanvas = document.getElementById('rope-canvas');
+                this.ropesLayer = document.getElementById('ropes-layer');
+                this.effectsCanvas = document.getElementById('effects-canvas');
+                this.effectsCtx = this.effectsCanvas.getContext('2d');
+
+                this.questionsCol = document.getElementById('questions-column');
+                this.answersCol = document.getElementById('answers-column');
+
+                // UI Elements
+                this.timerText = document.getElementById('timer-text');
+                this.movesText = document.getElementById('moves-text');
+                this.toast = document.getElementById('toast');
+
+                // Modals
+                this.introModal = document.getElementById('intro-modal');
+                this.pauseModal = document.getElementById('pause-modal');
+                this.resultModal = document.getElementById('result-modal');
+
+                // Game State
+                this.isPlaying = false;
+                this.isPaused = false;
+                this.isSuccess = false;
+                this.seconds = 0;
+                this.moves = 0;
+                this.timerInterval = null;
+                this.calculatedStars = 3;
+
+                // Puzzle Data Structure
+                this.questions = [];
+                this.slots = [];
+                this.ropes = [];
+                
+                // PERMANENT STATIC RENDER LAYERS
+                this.zOrder = [0, 1, 2, 3, 4, 5];
+
+                // Dragging State & Physics
+                this.draggingRopeIndex = null;
+                this.dragPos = { x: 0, y: 0 };
+                this.incorrectRopes = [];
+                this.incorrectStartTime = 0;
+
+                // Particles
+                this.particles = [];
+
+                this.resizeCanvas();
+                this.bindEvents();
+                this.startRenderLoop();
+            }
+
+            resizeCanvas() {
+                this.effectsCanvas.width = 710;
+                this.effectsCanvas.height = 1116;
+            }
+
+            bindEvents() {
+                document.getElementById('btn-start').addEventListener('click', () => {
+                    this.audio.playTick();
+                    this.hideModal(this.introModal);
+                    this.startGame();
+                });
+
+                document.getElementById('btn-pause').addEventListener('click', () => {
+                    this.audio.playTick();
+                    this.pauseGame();
+                });
+
+                document.getElementById('btn-resume').addEventListener('click', () => {
+                    this.audio.playTick();
+                    this.resumeGame();
+                });
+
+                document.getElementById('btn-restart').addEventListener('click', () => {
+                    this.audio.playTick();
+                    this.startGame();
+                });
+
+                document.getElementById('btn-pause-restart').addEventListener('click', () => {
+                    this.audio.playTick();
+                    this.hideModal(this.pauseModal);
+                    this.startGame();
+                });
+
+                document.getElementById('btn-check').addEventListener('click', () => {
+                    this.audio.playTick();
+                    this.checkAnswers();
+                });
+
+                document.getElementById('btn-next').addEventListener('click', () => {
+                    this.audio.playTick();
+                    this.saveProgressAndReturn();
+                });
+
+                // Pointer Events
+                window.addEventListener('pointerdown', (e) => this.onPointerDown(e));
+                window.addEventListener('pointermove', (e) => this.onPointerMove(e));
+                window.addEventListener('pointerup', (e) => this.onPointerUp(e));
+                window.addEventListener('pointercancel', (e) => this.onPointerUp(e));
+            }
+
+            showModal(modal) {
+                modal.classList.add('active');
+            }
+
+            hideModal(modal) {
+                modal.classList.remove('active');
+            }
+
+            showToast(msg) {
+                this.toast.innerText = msg;
+                this.toast.classList.add('active');
+                if (this.toastTimeout) clearTimeout(this.toastTimeout);
+                this.toastTimeout = setTimeout(() => {
+                    this.toast.classList.remove('active');
+                }, 2200);
+            }
+
+            /* ==================================================
+               PROCEDURAL TANGLE PUZZLE GENERATION
+               ================================================== */
+            startGame() {
+                this.hideModal(this.introModal);
+                this.hideModal(this.pauseModal);
+                this.hideModal(this.resultModal);
+
+                this.seconds = 0;
+                this.moves = 0;
+                this.isPlaying = true;
+                this.isPaused = false;
+                this.isSuccess = false;
+                this.incorrectRopes = [];
+
+                this.movesText.innerText = '0';
+                this.timerText.innerText = '00:00';
+
+                this.audio.playBGM();
+
+                if (this.timerInterval) clearInterval(this.timerInterval);
+                this.timerInterval = setInterval(() => {
+                    if (this.isPlaying && !this.isPaused && !this.isSuccess) {
+                        this.seconds++;
+                        const m = String(Math.floor(this.seconds / 60)).padStart(2, '0');
+                        const s = String(this.seconds % 60).padStart(2, '0');
+                        this.timerText.innerText = `${m}:${s}`;
+                    }
+                }, 1000);
+
+                this.generatePuzzle();
+            }
+
+            pauseGame() {
+                if (!this.isPlaying || this.isSuccess) return;
+                this.isPaused = true;
+                this.audio.pauseBGM();
+                this.showModal(this.pauseModal);
+            }
+
+            resumeGame() {
+                this.isPaused = false;
+                this.audio.resumeBGM();
+                this.hideModal(this.pauseModal);
+            }
+
+            generatePuzzle() {
+                // 1. Questions Q1..Q6 with randomized rope colors
+                const shuffledColors = [...ROPE_COLORS].sort(() => Math.random() - 0.5);
+                this.questions = QUESTIONS_DATA.map((q, idx) => ({
+                    ...q,
+                    color: shuffledColors[idx % shuffledColors.length]
+                }));
+
+                // 2. Prepare 7 Slots (6 Answer cards + 1 Empty Slot)
+                let answerItems = QUESTIONS_DATA.map(q => ({
+                    id: q.id,
+                    text: q.answer,
+                    isEmpty: false
+                })).sort(() => Math.random() - 0.5);
+
+                const emptySlotIdx = Math.floor(Math.random() * 7);
+                this.slots = [];
+                let aIdx = 0;
+                for (let i = 0; i < 7; i++) {
+                    if (i === emptySlotIdx) {
+                        this.slots.push({ id: null, text: '【空位】', isEmpty: true });
+                    } else {
+                        this.slots.push(answerItems[aIdx++]);
+                    }
+                }
+
+                this.renderDOMGrid();
+
+                // 3. Procedural Initial Connections
+                const availableSlotIndices = [];
+                this.slots.forEach((s, idx) => {
+                    if (!s.isEmpty) availableSlotIndices.push(idx);
+                });
+
+                let targetSlots = [];
+                let validConfig = false;
+                while (!validConfig) {
+                    targetSlots = [...availableSlotIndices].sort(() => Math.random() - 0.5);
+                    validConfig = true;
+                    for (let qIdx = 0; qIdx < 6; qIdx++) {
+                        const slotIdx = targetSlots[qIdx];
+                        if (this.slots[slotIdx].id === this.questions[qIdx].id) {
+                            validConfig = false;
+                            break;
+                        }
+                    }
+                }
+
+                // 4. Generate Procedural Rope Curves (Targeting 8-14 Crossings)
+                let bestRopes = [];
+                let maxCrossings = 0;
+
+                for (let attempt = 0; attempt < 25; attempt++) {
+                    const tempRopes = [];
+                    const allPolyPoints = [];
+
+                    for (let qIdx = 0; qIdx < 6; qIdx++) {
+                        const personality = (qIdx + attempt) % 6;
+                        const targetSlotIdx = targetSlots[qIdx];
+                        
+                        const cp1OffsetX = (Math.random() - 0.5) * 80;
+                        const cp1OffsetY = (personality % 2 === 0 ? 1 : -1) * (40 + Math.random() * 60);
+                        const cp2OffsetX = (Math.random() - 0.5) * 80;
+                        const cp2OffsetY = (personality % 3 === 0 ? -1 : 1) * (40 + Math.random() * 60);
+
+                        const ropeObj = {
+                            qIndex: qIdx,
+                            targetSlotIndex: targetSlotIdx,
+                            color: this.questions[qIdx].color,
+                            bounceStartTime: 0,
+                            cp1OffsetX,
+                            cp1OffsetY,
+                            cp2OffsetX,
+                            cp2OffsetY
+                        };
+
+                        tempRopes.push(ropeObj);
+
+                        const curve = this.calculatePolylineForRope(ropeObj);
+                        allPolyPoints.push(curve.points);
+                    }
+
+                    const crossings = IntersectionDetector.countRopeCrossings(allPolyPoints);
+                    if (crossings >= 8) {
+                        bestRopes = tempRopes;
+                        maxCrossings = crossings;
+                        break;
+                    }
+                    if (crossings > maxCrossings) {
+                        maxCrossings = crossings;
+                        bestRopes = tempRopes;
+                    }
+                }
+
+                this.ropes = bestRopes;
+                this.zOrder = [0, 1, 2, 3, 4, 5].sort(() => Math.random() - 0.5);
+
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        this.renderRopes();
+                    });
+                });
+            }
+
+            renderDOMGrid() {
+                // Left Column Questions
+                this.questionsCol.innerHTML = '';
+                this.questions.forEach((q, idx) => {
+                    const card = document.createElement('div');
+                    card.className = 'card question-card';
+                    card.id = `q-card-${idx}`;
+                    card.style.borderLeftColor = q.color.stroke;
+                    card.innerHTML = `
+                        <div>
+                            <div class="question-num" style="color: ${q.color.stroke}">QUESTION ${idx + 1}</div>
+                            <div class="question-text">${q.question}</div>
+                        </div>
+                        <div class="anchor-point" id="q-anchor-${idx}" style="background: ${q.color.stroke}"></div>
+                    `;
+                    this.questionsCol.appendChild(card);
+                });
+
+                // Right Column Slots
+                this.answersCol.innerHTML = '';
+                this.slots.forEach((s, idx) => {
+                    const slot = document.createElement('div');
+                    slot.className = `card answer-slot ${s.isEmpty ? 'empty-slot' : ''}`;
+                    slot.id = `a-slot-${idx}`;
+                    if (s.isEmpty) {
+                        slot.innerHTML = `
+                            <div class="anchor-point" id="a-anchor-${idx}"></div>
+                            <span class="empty-slot-label">【 暂存空位 】</span>
+                        `;
+                    } else {
+                        slot.innerHTML = `
+                            <div class="anchor-point" id="a-anchor-${idx}"></div>
+                            <div class="answer-text">${s.text}</div>
+                        `;
+                    }
+                    this.answersCol.appendChild(slot);
+                });
+            }
+
+            getAnchorPos(id) {
+                const el = document.getElementById(id);
+                const wrapperRect = this.wrapper.getBoundingClientRect();
+
+                if (el) {
+                    const rect = el.getBoundingClientRect();
+                    if (rect.width > 0 && rect.height > 0) {
+                        return {
+                            x: (rect.left + rect.width / 2 - wrapperRect.left) * (710 / wrapperRect.width),
+                            y: (rect.top + rect.height / 2 - wrapperRect.top) * (1116 / wrapperRect.height)
+                        };
+                    }
+                }
+
+                if (id.startsWith('q-anchor-')) {
+                    const idx = parseInt(id.replace('q-anchor-', ''), 10);
+                    return {
+                        x: 710 * 0.29,
+                        y: 1116 * 0.16 + idx * (1116 * 0.11)
+                    };
+                } else if (id.startsWith('a-anchor-')) {
+                    const idx = parseInt(id.replace('a-anchor-', ''), 10);
+                    return {
+                        x: 710 * 0.73,
+                        y: 1116 * 0.14 + idx * (1116 * 0.095)
+                    };
+                }
+
+                return { x: 0, y: 0 };
+            }
+
+            /* ==================================================
+               BEZIER CURVE CALCULATION & PROCEDURAL ROUTING
+               ================================================== */
+            calculatePolylineForRope(rope, dragOverridePos = null) {
+                const start = this.getAnchorPos(`q-anchor-${rope.qIndex}`);
+                let end = dragOverridePos ? dragOverridePos : this.getAnchorPos(`a-anchor-${rope.targetSlotIndex}`);
+
+                const dx = Math.abs(end.x - start.x);
+                let sag1 = rope.cp1OffsetY;
+                let sag2 = rope.cp2OffsetY;
+
+                const now = performance.now();
+
+                // 1. Release Bounce overshoot effect
+                if (rope.bounceStartTime && !dragOverridePos) {
+                    const elapsed = (now - rope.bounceStartTime) / 1000;
+                    if (elapsed < 0.3) {
+                        const damping = Math.exp(-elapsed * 12) * Math.sin(elapsed * Math.PI * 18);
+                        sag1 += damping * 20;
+                        sag2 += damping * 20;
+                    } else {
+                        rope.bounceStartTime = 0;
+                    }
+                }
+
+                // 2. Secondary reaction sway on intersecting ropes while dragging another
+                if (this.draggingRopeIndex !== null && this.draggingRopeIndex !== rope.qIndex) {
+                    const dragDist = Math.hypot(
+                        this.dragPos.x - (start.x + end.x) / 2, 
+                        this.dragPos.y - (start.y + end.y) / 2
+                    );
+                    if (dragDist < 200) {
+                        const swayAmt = (1 - dragDist / 200) * 8;
+                        sag1 += Math.sin(now * 0.015 + rope.qIndex * 2.0) * swayAmt;
+                    }
+                }
+
+                const cp1 = { x: start.x + dx * 0.45 + rope.cp1OffsetX, y: start.y + sag1 };
+                const cp2 = { x: end.x - dx * 0.45 + rope.cp2OffsetX, y: end.y + sag2 };
+
+                return {
+                    start,
+                    cp1,
+                    cp2,
+                    end,
+                    points: IntersectionDetector.getCurvePoints(start, cp1, cp2, end, 20)
+                };
+            }
+
+            getRopePolyline(qIdx, targetSlotIdx, dragOverridePos = null) {
+                const rope = this.ropes[qIdx];
+                return this.calculatePolylineForRope(rope, dragOverridePos);
+            }
+
+            /* ==================================================
+               UNRESTRICTED POINTER DRAG HANDLERS
+               ================================================== */
+            getPointerPos(e) {
+                const wrapperRect = this.wrapper.getBoundingClientRect();
+                return {
+                    x: (e.clientX - wrapperRect.left) * (710 / wrapperRect.width),
+                    y: (e.clientY - wrapperRect.top) * (1116 / wrapperRect.height)
+                };
+            }
+
+            onPointerDown(e) {
+                if (!this.isPlaying || this.isPaused || this.isSuccess) return;
+
+                const pos = this.getPointerPos(e);
+
+                for (let i = 0; i < 6; i++) {
+                    const r = this.ropes[i];
+                    const endPos = this.getAnchorPos(`a-anchor-${r.targetSlotIndex}`);
+                    const dist = Math.hypot(pos.x - endPos.x, pos.y - endPos.y);
+
+                    if (dist < 45) { // Touch hit radius
+                        this.draggingRopeIndex = i;
+                        this.dragPos = pos;
+                        
+                        this.audio.playPull();
+                        
+                        const slotEl = document.getElementById(`a-slot-${r.targetSlotIndex}`);
+                        if (slotEl) slotEl.style.transform = "scale(1.04)";
+                        return;
+                    }
+                }
+            }
+
+            onPointerMove(e) {
+                if (this.draggingRopeIndex !== null) {
+                    this.dragPos = this.getPointerPos(e);
+                    this.audio.playPull();
+                }
+            }
+
+            onPointerUp(e) {
+                this.audio.stopPull();
+
+                if (this.draggingRopeIndex === null) return;
+
+                const ropeIdx = this.draggingRopeIndex;
+                const pos = this.getPointerPos(e);
+                this.draggingRopeIndex = null;
+
+                this.slots.forEach((_, idx) => {
+                    const el = document.getElementById(`a-slot-${idx}`);
+                    if (el) el.style.transform = "none";
+                });
+
+                let nearestSlotIdx = -1;
+                let minDist = 110; // Mobile snap radius
+
+                this.slots.forEach((_, sIdx) => {
+                    const slotPos = this.getAnchorPos(`a-anchor-${sIdx}`);
+                    const dist = Math.hypot(pos.x - slotPos.x, pos.y - slotPos.y);
+                    if (dist < minDist) {
+                        minDist = dist;
+                        nearestSlotIdx = sIdx;
+                    }
+                });
+
+                // Drop onto target slot
+                if (nearestSlotIdx !== -1 && nearestSlotIdx !== this.ropes[ropeIdx].targetSlotIndex) {
+                    const oldSlotIdx = this.ropes[ropeIdx].targetSlotIndex;
+                    const occupantRopeIdx = this.ropes.findIndex(r => r.targetSlotIndex === nearestSlotIdx);
+
+                    if (occupantRopeIdx !== -1) {
+                        this.ropes[occupantRopeIdx].targetSlotIndex = oldSlotIdx;
+                        this.ropes[occupantRopeIdx].bounceStartTime = performance.now();
+                    }
+                    this.ropes[ropeIdx].targetSlotIndex = nearestSlotIdx;
+                    this.ropes[ropeIdx].bounceStartTime = performance.now();
+
+                    this.moves++;
+                    this.movesText.innerText = this.moves;
+                    this.audio.playSnap();
+                } else {
+                    this.ropes[ropeIdx].bounceStartTime = performance.now();
+                }
+            }
+
+            /* ==================================================
+               CHECKING SYSTEM (MANUAL BUTTON TRIGGERED)
+               ================================================== */
+            checkAnswers() {
+                if (!this.isPlaying || this.isSuccess) return;
+
+                let allCorrect = true;
+                let hasRopeInEmpty = false;
+                const wrongIndices = [];
+
+                this.ropes.forEach((r, qIdx) => {
+                    const targetSlot = this.slots[r.targetSlotIndex];
+                    if (targetSlot.isEmpty) {
+                        hasRopeInEmpty = true;
+                        allCorrect = false;
+                        wrongIndices.push(qIdx);
+                    } else if (targetSlot.id !== this.questions[qIdx].id) {
+                        allCorrect = false;
+                        wrongIndices.push(qIdx);
+                    }
+                });
+
+                if (hasRopeInEmpty) {
+                    this.audio.playWrong();
+                    this.showToast("请将所有绳子连接到答案卡！");
+                    this.triggerIncorrectFeedback(wrongIndices);
+                    return;
+                }
+
+                if (!allCorrect) {
+                    this.audio.playWrong();
+                    this.showToast("【还有一些绳子连接错了，请继续调整！】");
+                    this.triggerIncorrectFeedback(wrongIndices);
+                    return;
+                }
+
+                // SUCCESS SEQUENCE!
+                this.isSuccess = true;
+                this.audio.playSuccess();
+
+                this.questions.forEach((_, idx) => {
+                    const card = document.getElementById(`q-card-${idx}`);
+                    if (card) card.classList.add('correct-pulse');
+                });
+
+                this.spawnVictoryParticles();
+
+                setTimeout(() => {
+                    this.showResults();
+                }, 1200);
+            }
+
+            triggerIncorrectFeedback(wrongIndices) {
+                this.incorrectRopes = wrongIndices;
+                this.incorrectStartTime = performance.now();
+
+                wrongIndices.forEach(qIdx => {
+                    const qCard = document.getElementById(`q-card-${qIdx}`);
+                    if (qCard) {
+                        qCard.classList.add('shake');
+                        setTimeout(() => qCard.classList.remove('shake'), 400);
+                    }
+                });
+            }
+
+            spawnVictoryParticles() {
+                const w = this.effectsCanvas.width;
+                const h = this.effectsCanvas.height;
+                const colors = ['#facc15', '#38bdf8', '#4ade80', '#f43f5e', '#a855f7'];
+
+                for (let i = 0; i < 120; i++) {
+                    this.particles.push({
+                        x: w / 2 + (Math.random() - 0.5) * 200,
+                        y: h / 2 + (Math.random() - 0.5) * 200,
+                        vx: (Math.random() - 0.5) * 14,
+                        vy: (Math.random() - 0.7) * 14,
+                        size: Math.random() * 8 + 4,
+                        color: colors[Math.floor(Math.random() * colors.length)],
+                        alpha: 1,
+                        decay: Math.random() * 0.015 + 0.008,
+                        rotation: Math.random() * 360,
+                        vRot: (Math.random() - 0.5) * 10
+                    });
+                }
+            }
+
+            showResults() {
+                const timeStr = this.timerText.innerText;
+                document.getElementById('res-time').innerText = timeStr;
+                document.getElementById('res-moves').innerText = `${this.moves} 次`;
+
+                let starCount = 1;
+                if (this.seconds <= 90) starCount = 3;
+                else if (this.seconds <= 120) starCount = 2;
+
+                this.calculatedStars = starCount;
+                document.getElementById('res-stars').innerText = `${starCount} 星`;
+
+                for (let i = 1; i <= 3; i++) {
+                    const starEl = document.getElementById(`star-${i}`);
+                    if (i <= starCount) starEl.classList.add('earned');
+                    else starEl.classList.remove('earned');
+                }
+
+                this.showModal(this.resultModal);
+            }
+
+            saveProgressAndReturn() {
+                this.audio.stopBGM();
+                const stars = this.calculatedStars || 3;
+
+                try {
+                    // Direct synchronization with index.html's game_level_progression_v1 system
+                    const STORAGE_KEY = 'game_level_progression_v1';
+                    let progress;
+                    try {
+                        const saved = localStorage.getItem(STORAGE_KEY);
+                        if (saved) {
+                            progress = JSON.parse(saved);
+                        } else {
+                            progress = {
+                                levels: { 1: { unlocked: true, completed: false, stars: 0, score: 0 } },
+                                achievements: [],
+                                stats: { totalScore: 0, levelsCompleted: 0 }
+                            };
+                        }
+                    } catch (e) {
+                        progress = { levels: {} };
+                    }
+
+                    if (!progress.levels) progress.levels = {};
+
+                    // Mark Level 8 as completed
+                    progress.levels[8] = {
+                        unlocked: true,
+                        completed: true,
+                        stars: stars,
+                        score: stars * 100
+                    };
+
+                    // Unlock Level 9
+                    if (!progress.levels[9]) {
+                        progress.levels[9] = {};
+                    }
+                    progress.levels[9].unlocked = true;
+
+                    // Recalculate global statistics
+                    let totalScore = 0;
+                    let completedCount = 0;
+                    Object.keys(progress.levels).forEach(k => {
+                        const lvl = progress.levels[k];
+                        if (lvl.completed) completedCount++;
+                        if (lvl.score) totalScore += lvl.score;
+                    });
+                    if (!progress.stats) progress.stats = {};
+                    progress.stats.totalScore = totalScore;
+                    progress.stats.levelsCompleted = completedCount;
+
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(progress));
+
+                    // Auxiliary local keys for fallback compatibility
+                    localStorage.setItem('level_8_completed', 'true');
+                    localStorage.setItem('level_8_stars', String(stars));
+                    const currentUnlocked = parseInt(localStorage.getItem('unlockedLevel') || '8', 10);
+                    if (currentUnlocked < 9) {
+                        localStorage.setItem('unlockedLevel', '9');
+                    }
+                } catch (e) {
+                    console.warn('LocalStorage progress save warning:', e);
+                }
+
+                // Return to World Map
+                window.location.href = 'index.html';
+            }
+
+            /* ==================================================
+               MAIN RENDER LOOP (60 FPS)
+               ================================================== */
+            startRenderLoop() {
+                const render = () => {
+                    this.renderRopes();
+                    this.renderParticles();
+                    requestAnimationFrame(render);
+                };
+                requestAnimationFrame(render);
+            }
+
+            renderRopes() {
+                if (!this.ropesLayer || this.ropes.length === 0) return;
+
+                let svgContent = '';
+                const now = performance.now();
+                const isIncorrectActive = (now - this.incorrectStartTime) < 1800;
+
+                // RENDER IN PERMANENT STATIC Z-ORDER
+                this.zOrder.forEach((qIdx) => {
+                    const rope = this.ropes[qIdx];
+                    if (!rope) return;
+                    const isDragging = (this.draggingRopeIndex === qIdx);
+                    const isIncorrect = isIncorrectActive && this.incorrectRopes.includes(qIdx);
+
+                    const curve = this.getRopePolyline(
+                        qIdx, 
+                        rope.targetSlotIndex, 
+                        isDragging ? this.dragPos : null
+                    );
+
+                    let strokeColor = rope.color.stroke;
+                    let highlightColor = rope.color.highlight;
+
+                    if (isIncorrect) {
+                        strokeColor = '#f43f5e';
+                        highlightColor = '#fca5a5';
+                    }
+
+                    const pathD = `M ${curve.start.x} ${curve.start.y} C ${curve.cp1.x} ${curve.cp1.y}, ${curve.cp2.x} ${curve.cp2.y}, ${curve.end.x} ${curve.end.y}`;
+
+                    // Outer Shadow
+                    svgContent += `
+                        <path d="${pathD}" fill="none" stroke="#000000" stroke-width="16" stroke-linecap="round" opacity="0.4" filter="url(#rope-shadow)"/>
+                    `;
+
+                    // Main 3D Rope Cable
+                    svgContent += `
+                        <path d="${pathD}" fill="none" stroke="${strokeColor}" stroke-width="${isDragging ? 14 : 12}" stroke-linecap="round" opacity="${isDragging ? 1 : 0.95}" ${isDragging ? 'filter="url(#drag-glow)"' : (isIncorrect ? 'filter="url(#incorrect-glow)"' : '')}/>
+                    `;
+
+                    // Inner Gloss Highlight
+                    svgContent += `
+                        <path d="${pathD}" fill="none" stroke="${highlightColor}" stroke-width="${isDragging ? 5 : 4}" stroke-linecap="round" opacity="0.9"/>
+                    `;
+
+                    // Handle Pin Node at Right Endpoint
+                    svgContent += `
+                        <circle cx="${curve.end.x}" cy="${curve.end.y}" r="${isDragging ? 14 : 10}" fill="${strokeColor}" stroke="#ffffff" stroke-width="3" filter="url(#glow-effect)" style="cursor: grab;"/>
+                    `;
+                });
+
+                this.ropesLayer.innerHTML = svgContent;
+            }
+
+            renderParticles() {
+                this.effectsCtx.clearRect(0, 0, this.effectsCanvas.width, this.effectsCanvas.height);
+
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    const p = this.particles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += 0.25;
+                    p.alpha -= p.decay;
+                    p.rotation += p.vRot;
+
+                    if (p.alpha <= 0) {
+                        this.particles.splice(i, 1);
+                        continue;
+                    }
+
+                    this.effectsCtx.save();
+                    this.effectsCtx.globalAlpha = Math.max(0, p.alpha);
+                    this.effectsCtx.translate(p.x, p.y);
+                    this.effectsCtx.rotate((p.rotation * Math.PI) / 180);
+                    this.effectsCtx.fillStyle = p.color;
+                    this.effectsCtx.fillRect(-p.size / 2, -p.size / 2, p.size, p.size);
+                    this.effectsCtx.restore();
+                }
+            }
+        }
+
+        // Initialize Game Engine when DOM Loaded
+        window.addEventListener('DOMContentLoaded', () => {
+            window.game = new GameEngine();
+        });
+    </script>
+</body>
+</html>

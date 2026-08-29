@@ -1,0 +1,1826 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Level 9 - 跳箱子挑战</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            margin: 0;
+            padding: 0;
+            touch-action: manipulation;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #0d1117;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            max-width: 540px;
+            max-height: 960px;
+            margin: 0 auto;
+            background: #111;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8);
+            overflow: hidden;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Fade-to-black Overlay for smooth map return transition */
+        #fade-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: #000000;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 99999;
+            transition: opacity 0.6s ease;
+        }
+
+        /* Top HUD - Hidden during intro, slides down smoothly on gameplay start */
+        #hud {
+            position: absolute;
+            top: 12px;
+            left: 12px;
+            right: 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            z-index: 10;
+            pointer-events: none;
+            opacity: 0;
+            transform: translateY(-30px);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+
+        #hud.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .hud-row-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .hud-card {
+            background: rgba(20, 25, 45, 0.85);
+            backdrop-filter: blur(8px);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 20px;
+            padding: 6px 14px;
+            color: #fff;
+            font-weight: bold;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        }
+
+        .hearts-container {
+            font-size: 18px;
+            letter-spacing: 2px;
+        }
+
+        .platform-counter {
+            flex-direction: column;
+            align-items: center;
+            padding: 4px 16px;
+            min-width: 130px;
+        }
+
+        .platform-title {
+            font-size: 11px;
+            color: #a0aec0;
+            letter-spacing: 1px;
+        }
+
+        .platform-text {
+            font-size: 15px;
+            color: #ffd700;
+            text-shadow: 0 0 6px rgba(255, 215, 0, 0.6);
+            font-weight: 800;
+        }
+
+        .btn-pause {
+            pointer-events: auto;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            color: white;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            backdrop-filter: blur(5px);
+            transition: transform 0.1s;
+        }
+
+        .btn-pause:active {
+            transform: scale(0.9);
+        }
+
+        /* PvZ-Style Question Progress Tracker */
+        .tracker-card {
+            background: rgba(15, 20, 35, 0.88);
+            backdrop-filter: blur(8px);
+            border: 2px solid rgba(255, 215, 0, 0.3);
+            border-radius: 16px;
+            padding: 8px 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+        }
+
+        .tracker-track {
+            position: absolute;
+            left: 28px;
+            right: 28px;
+            top: 50%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.15);
+            transform: translateY(-50%);
+            z-index: 1;
+            border-radius: 2px;
+        }
+
+        .tracker-progress-line {
+            position: absolute;
+            left: 28px;
+            top: 50%;
+            height: 4px;
+            background: linear-gradient(90deg, #4facfe, #00f2fe);
+            transform: translateY(-50%);
+            z-index: 2;
+            width: 0%;
+            transition: width 0.4s ease;
+            border-radius: 2px;
+            box-shadow: 0 0 8px #00f2fe;
+        }
+
+        .tracker-nodes {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            position: relative;
+            z-index: 3;
+        }
+
+        .tracker-node {
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background: #1e2640;
+            border: 2px solid #4a5568;
+            color: #a0aec0;
+            font-size: 12px;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .tracker-node.active {
+            border-color: #00f2fe;
+            color: #00f2fe;
+            box-shadow: 0 0 8px rgba(0, 242, 254, 0.6);
+            background: #111a2e;
+        }
+
+        .tracker-node.completed {
+            background: #2ed573;
+            border-color: #2ed573;
+            color: #ffffff;
+            box-shadow: 0 0 10px rgba(46, 213, 115, 0.8);
+            font-size: 13px;
+        }
+
+        .tracker-finish-flag {
+            font-size: 14px;
+        }
+
+        /* Overlay Styles */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 15, 30, 0.85);
+            backdrop-filter: blur(8px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease;
+            padding: 20px;
+        }
+
+        .overlay.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* UI Dialog Cards */
+        .modal-card {
+            background: linear-gradient(145deg, #1e2640, #111625);
+            border: 2px solid #3a4b7c;
+            border-radius: 24px;
+            padding: 24px 20px;
+            width: 90%;
+            max-width: 420px;
+            text-align: center;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255,255,255,0.2);
+            position: relative;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .modal-title {
+            font-size: 24px;
+            color: #ffffff;
+            margin-bottom: 12px;
+            font-weight: 800;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .modal-desc {
+            font-size: 15px;
+            color: #a0aec0;
+            margin-bottom: 20px;
+            line-height: 1.4;
+        }
+
+        /* UI Buttons */
+        .btn-primary {
+            background: linear-gradient(180deg, #ff9d00 0%, #e65c00 100%);
+            border: none;
+            border-bottom: 4px solid #b33600;
+            border-radius: 30px;
+            color: white;
+            padding: 12px 28px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(230, 92, 0, 0.4);
+            transition: all 0.15s ease;
+            margin: 6px 0;
+            width: 100%;
+            letter-spacing: 1px;
+        }
+
+        .btn-primary:active {
+            transform: translateY(2px);
+            border-bottom-width: 2px;
+            box-shadow: 0 2px 5px rgba(230, 92, 0, 0.4);
+        }
+
+        .btn-secondary {
+            background: linear-gradient(180deg, #4a5568 0%, #2d3748 100%);
+            border: none;
+            border-bottom: 4px solid #1a202c;
+            border-radius: 30px;
+            color: #e2e8f0;
+            padding: 10px 24px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 6px 0;
+            width: 100%;
+            transition: all 0.15s ease;
+        }
+
+        .btn-secondary:active {
+            transform: translateY(2px);
+            border-bottom-width: 2px;
+        }
+
+        /* Question Box (Malay content, Simplified Chinese UI) */
+        .question-badge {
+            background: #ff4757;
+            color: white;
+            font-size: 12px;
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .question-text {
+            color: #ffffff;
+            font-size: 16px;
+            text-align: left;
+            margin-bottom: 20px;
+            background: rgba(0,0,0,0.3);
+            padding: 14px;
+            border-radius: 12px;
+            border-left: 4px solid #ff9d00;
+            line-height: 1.5;
+        }
+
+        .options-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .option-btn {
+            background: rgba(255, 255, 255, 0.08);
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            border-radius: 14px;
+            color: #fff;
+            padding: 12px 16px;
+            text-align: left;
+            font-size: 15px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+        }
+
+        .option-btn:active {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .option-btn.correct {
+            background: rgba(46, 213, 115, 0.25) !important;
+            border-color: #2ed573 !important;
+            color: #2ed573 !important;
+        }
+
+        .option-btn.wrong {
+            background: rgba(255, 71, 87, 0.25) !important;
+            border-color: #ff4757 !important;
+            color: #ff4757 !important;
+            animation: shake 0.4s ease;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-8px); }
+            40%, 80% { transform: translateX(8px); }
+        }
+
+        .feedback-msg {
+            font-size: 15px;
+            font-weight: bold;
+            min-height: 22px;
+            margin-bottom: 10px;
+        }
+        .feedback-msg.wrong { color: #ff4757; }
+        .feedback-msg.correct { color: #2ed573; }
+
+        .stats-container {
+            background: rgba(0,0,0,0.3);
+            border-radius: 16px;
+            padding: 15px;
+            margin: 15px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            color: #d1d5db;
+            font-size: 15px;
+        }
+
+        .stat-value {
+            color: #ffd700;
+            font-weight: bold;
+        }
+
+        .star-rating {
+            font-size: 36px;
+            margin: 10px 0;
+            letter-spacing: 5px;
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            color: #fff;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .toggle-btn {
+            background: #2ed573;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 12px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .toggle-btn.off {
+            background: #a4b0be;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Fade Overlay for smooth transition back to main map -->
+    <div id="fade-overlay"></div>
+
+    <div id="game-container">
+        <!-- Canvas Layer -->
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- Initial Game Rules Overlay (STEP 1) -->
+        <div class="overlay active" id="rules-modal">
+            <div class="modal-card">
+                <div style="color: #ffd700; font-size: 14px; font-weight: 800; letter-spacing: 2px; margin-bottom: 4px;">LEVEL 9</div>
+                <div class="modal-title" style="margin-bottom: 16px;">跳箱子挑战</div>
+                
+                <div style="background: rgba(0,0,0,0.35); border-radius: 16px; padding: 16px; text-align: left; margin-bottom: 20px; border: 1px solid rgba(255,215,0,0.2);">
+                    <div style="color: #ffd700; font-weight: bold; font-size: 16px; margin-bottom: 10px; text-align: center;">游戏规则</div>
+                    <ul style="color: #e2e8f0; font-size: 14px; line-height: 1.7; padding-left: 20px; list-style-type: disc;">
+                        <li>手机点击屏幕，电脑按 Space 键，使移动平台停下来。</li>
+                        <li>成功站上平台即可继续挑战。</li>
+                        <li>到达指定平台时，需要回答 Sejarah 历史问题。</li>
+                        <li>一共有 3 颗爱心。</li>
+                        <li>掉下平台会扣除一颗爱心。</li>
+                        <li>完成全部 6 题即可成功通关！</li>
+                    </ul>
+                </div>
+
+                <button class="btn-primary" id="btn-start-game" onclick="startGameFromRules()">开始挑战 🚀</button>
+            </div>
+        </div>
+
+        <!-- Top HUD (Hidden during Intro, fades & slides in on gameplay start) -->
+        <div id="hud">
+            <div class="hud-row-top">
+                <div class="hud-card">
+                    <span class="hearts-container" id="hearts-display">❤️❤️❤️</span>
+                </div>
+                <div class="hud-card platform-counter">
+                    <span class="platform-title">当前平台</span>
+                    <span class="platform-text" id="platform-display">第 1 格</span>
+                </div>
+                <button class="btn-pause" id="pause-btn" onclick="togglePause()">⏸️</button>
+            </div>
+
+            <!-- Question Progress Tracker (PvZ Style) -->
+            <div class="tracker-card">
+                <div class="tracker-track"></div>
+                <div class="tracker-progress-line" id="tracker-line"></div>
+                <div class="tracker-nodes">
+                    <div class="tracker-node" id="tn-1">1</div>
+                    <div class="tracker-node" id="tn-2">2</div>
+                    <div class="tracker-node" id="tn-3">3</div>
+                    <div class="tracker-node" id="tn-4">4</div>
+                    <div class="tracker-node" id="tn-5">5</div>
+                    <div class="tracker-node" id="tn-6"><span class="tracker-finish-flag">🏁</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Question Modal Popup -->
+        <div class="overlay" id="question-modal">
+            <div class="modal-card">
+                <div class="question-badge">Sejarah 历史问答</div>
+                <div class="question-text" id="q-text">Loading question...</div>
+                <div class="options-grid" id="q-options"></div>
+                <div class="feedback-msg" id="q-feedback"></div>
+                <button class="btn-primary" id="q-submit-btn" style="display:none;" onclick="continueAfterQuestion()">继续挑战 🚀</button>
+            </div>
+        </div>
+
+        <!-- Pause Menu Overlay -->
+        <div class="overlay" id="pause-modal">
+            <div class="modal-card">
+                <div class="modal-title">游戏暂停</div>
+                <div class="setting-row">
+                    <span>音效</span>
+                    <button class="toggle-btn" id="sfx-toggle" onclick="toggleSFX()">开启</button>
+                </div>
+                <div class="setting-row" style="margin-bottom: 15px;">
+                    <span>背景音乐</span>
+                    <button class="toggle-btn" id="bgm-toggle" onclick="toggleBGM()">开启</button>
+                </div>
+                <button class="btn-primary" onclick="togglePause()">继续游戏</button>
+                <button class="btn-secondary" onclick="restartGame()">重新开始</button>
+                <button class="btn-secondary" onclick="exitGame()">退出游戏</button>
+            </div>
+        </div>
+
+        <!-- Game Over Modal -->
+        <div class="overlay" id="gameover-modal">
+            <div class="modal-card">
+                <div class="modal-title" style="color: #ff4757;">游戏结束</div>
+                <div class="modal-desc" id="gameover-desc">太遗憾了，再接再厉！</div>
+                <div class="stats-container">
+                    <div class="stat-row">
+                        <span>最高到达平台</span>
+                        <span class="stat-value" id="go-platforms">第 1 格</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>完成问题</span>
+                        <span class="stat-value" id="go-questions">0 / 6</span>
+                    </div>
+                </div>
+                <button class="btn-primary" onclick="restartGame()">重新开始 🔄</button>
+                <button class="btn-secondary" onclick="exitGame()">退出</button>
+            </div>
+        </div>
+
+        <!-- Victory Screen Overlay (Manual redirect on player button click) -->
+        <div class="overlay" id="victory-modal">
+            <div class="modal-card">
+                <div class="modal-title" style="color: #ffd700;">恭喜通关！</div>
+                <div class="star-rating" id="star-display">⭐⭐⭐</div>
+                <div class="stats-container">
+                    <div class="stat-row">
+                        <span>建造平台</span>
+                        <span class="stat-value">15 / 15 格</span>
+                    </div>
+                    <div class="stat-row">
+                        <span>答对题目</span>
+                        <span class="stat-value">6 / 6 题</span>
+                    </div>
+                </div>
+                <button class="btn-primary" style="margin-top: 15px;" onclick="returnToMainMap()">🏠 返回主地图</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        /* --- GAME PROGRESSION HELPER (Shared with index.html) --- */
+        const GameProgression = {
+            STORAGE_KEY: 'game_level_progression_v1',
+            getProgress() {
+                try {
+                    const saved = localStorage.getItem(this.STORAGE_KEY);
+                    if (saved) return JSON.parse(saved);
+                } catch (e) {
+                    console.error("Local storage read error", e);
+                }
+                return this.getInitialState();
+            },
+            getInitialState() {
+                return {
+                    levels: {
+                        1: { unlocked: true, completed: false, stars: 0, score: 0 }
+                    },
+                    achievements: [],
+                    stats: { totalScore: 0, levelsCompleted: 0 }
+                };
+            },
+            save(progress) {
+                try {
+                    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(progress));
+                } catch (e) {
+                    console.error("Local storage save error", e);
+                }
+            },
+            completeLevel(levelId, data = {}) {
+                const id = parseInt(levelId);
+                const progress = this.getProgress();
+                if (!progress.levels[id]) {
+                    progress.levels[id] = {};
+                }
+                progress.levels[id].completed = true;
+                progress.levels[id].unlocked = true;
+                if (data.stars !== undefined) progress.levels[id].stars = data.stars;
+                if (data.score !== undefined) progress.levels[id].score = data.score;
+
+                const nextId = id + 1;
+                if (nextId <= 9) {
+                    if (!progress.levels[nextId]) progress.levels[nextId] = {};
+                    progress.levels[nextId].unlocked = true;
+                }
+
+                let totalScore = 0;
+                let completedCount = 0;
+                Object.keys(progress.levels).forEach(k => {
+                    const lvl = progress.levels[k];
+                    if (lvl.completed) completedCount++;
+                    if (lvl.score) totalScore += lvl.score;
+                });
+                progress.stats.totalScore = totalScore;
+                progress.stats.levelsCompleted = completedCount;
+
+                this.save(progress);
+                return progress;
+            }
+        };
+
+        /* --- AUDIO MANAGER (Preloaded Audio Assets & Mobile Unlocking) --- */
+        class AudioManager {
+            constructor() {
+                this.sfxEnabled = true;
+                this.bgmEnabled = true;
+                this.unlocked = false;
+
+                // Load Audio Objects
+                this.bgm = new Audio('level9_bgm.mp3');
+                this.bgm.loop = true;
+                this.bgm.volume = 0;
+
+                this.sfxClick = new Audio('level9_click.mp3');
+                this.sfxClick.volume = 0.60;
+
+                this.sfxCorrect = new Audio('level9_correct.mp3');
+                this.sfxCorrect.volume = 0.75;
+
+                this.sfxWrong = new Audio('level9_wrong.wav');
+                this.sfxWrong.volume = 0.70;
+
+                this.sfxCompleted = new Audio('game-level-completed.wav');
+                this.sfxCompleted.volume = 0.85;
+
+                this.bgmFadeInterval = null;
+                this.synthCtx = null;
+
+                // Preload Audio Files
+                [this.bgm, this.sfxClick, this.sfxCorrect, this.sfxWrong, this.sfxCompleted].forEach(a => {
+                    a.preload = 'auto';
+                    a.load();
+                });
+
+                // Tab Visibility Change Handler
+                document.addEventListener('visibilitychange', () => {
+                    if (document.hidden) {
+                        this.pauseBGM();
+                    } else {
+                        if (gameState === 'PLAYING' || gameState === 'QUESTION' || gameState === 'INTRO') {
+                            this.resumeBGM();
+                        }
+                    }
+                });
+            }
+
+            unlock() {
+                if (this.unlocked) return;
+                this.unlocked = true;
+
+                const unlockAudio = (audioObj) => {
+                    const p = audioObj.play();
+                    if (p !== undefined) {
+                        p.then(() => {
+                            audioObj.pause();
+                            audioObj.currentTime = 0;
+                        }).catch(() => {});
+                    }
+                };
+                [this.sfxClick, this.sfxCorrect, this.sfxWrong, this.sfxCompleted].forEach(unlockAudio);
+            }
+
+            playClick() {
+                if (!this.sfxEnabled) return;
+                this.unlock();
+                try {
+                    this.sfxClick.currentTime = 0;
+                    this.sfxClick.play().catch(() => {});
+                } catch (e) {}
+            }
+
+            /* Restored Soft Platform Landing Thump/Bounce */
+            playLand() {
+                if (!this.sfxEnabled) return;
+                this.unlock();
+                try {
+                    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+                    if (!this.synthCtx) {
+                        this.synthCtx = new AudioCtx();
+                    }
+                    if (this.synthCtx.state === 'suspended') {
+                        this.synthCtx.resume();
+                    }
+                    const osc = this.synthCtx.createOscillator();
+                    const gain = this.synthCtx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(120, this.synthCtx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(35, this.synthCtx.currentTime + 0.12);
+                    
+                    gain.gain.setValueAtTime(0.35, this.synthCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, this.synthCtx.currentTime + 0.12);
+                    
+                    osc.connect(gain);
+                    gain.connect(this.synthCtx.destination);
+                    osc.start();
+                    osc.stop(this.synthCtx.currentTime + 0.12);
+                } catch (e) {}
+            }
+
+            playCorrect() {
+                if (!this.sfxEnabled) return;
+                this.unlock();
+                try {
+                    this.sfxCorrect.currentTime = 0;
+                    this.sfxCorrect.play().catch(() => {});
+                } catch (e) {}
+            }
+
+            playWrong() {
+                if (!this.sfxEnabled) return;
+                this.unlock();
+                try {
+                    this.sfxWrong.currentTime = 0;
+                    this.sfxWrong.play().catch(() => {});
+                } catch (e) {}
+            }
+
+            playLevelCompleted() {
+                if (!this.sfxEnabled) return;
+                this.unlock();
+                try {
+                    this.sfxCompleted.currentTime = 0;
+                    this.sfxCompleted.play().catch(() => {});
+                } catch (e) {}
+            }
+
+            startBGM() {
+                if (!this.bgmEnabled) return;
+                this.unlock();
+
+                if (this.bgmFadeInterval) clearInterval(this.bgmFadeInterval);
+
+                this.bgm.currentTime = 0;
+                this.bgm.volume = 0;
+                const targetVol = 0.40; // 40% BGM Volume
+
+                const playPromise = this.bgm.play();
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        const startTime = performance.now();
+                        const fadeDuration = 600; // 600ms fade in
+                        this.bgmFadeInterval = setInterval(() => {
+                            const elapsed = performance.now() - startTime;
+                            const progress = Math.min(1, elapsed / fadeDuration);
+                            this.bgm.volume = progress * targetVol;
+                            if (progress >= 1) {
+                                clearInterval(this.bgmFadeInterval);
+                                this.bgmFadeInterval = null;
+                            }
+                        }, 16);
+                    }).catch(err => {
+                        console.warn("BGM autoplay postponed until interaction:", err);
+                    });
+                }
+            }
+
+            pauseBGM() {
+                if (this.bgmFadeInterval) clearInterval(this.bgmFadeInterval);
+                this.bgm.pause();
+            }
+
+            resumeBGM() {
+                if (!this.bgmEnabled || this.bgm.ended) return;
+                this.unlock();
+                this.bgm.volume = 0.40;
+                this.bgm.play().catch(() => {});
+            }
+
+            fadeOutBGM(duration = 500) {
+                if (this.bgmFadeInterval) clearInterval(this.bgmFadeInterval);
+                const startVol = this.bgm.volume;
+                const startTime = performance.now();
+
+                this.bgmFadeInterval = setInterval(() => {
+                    const elapsed = performance.now() - startTime;
+                    const progress = Math.min(1, elapsed / duration);
+                    this.bgm.volume = startVol * (1 - progress);
+                    if (progress >= 1) {
+                        clearInterval(this.bgmFadeInterval);
+                        this.bgmFadeInterval = null;
+                        this.bgm.pause();
+                    }
+                }, 16);
+            }
+        }
+
+        const audio = new AudioManager();
+
+        /* --- XIAOKE PNG IMAGE PRELOADING --- */
+        const xiaokeImages = {};
+        const xiaokeFiles = {
+            landing: 'level9_xiaoke1.png',
+            jumpUp: 'level9_xiaoke2.png',
+            falling: 'level9_xiaoke3.png',
+            prep: 'level9_xiaoke4.png',
+            idle: 'level9_xiaoke5.png',
+            victory: 'level9_xiaoke6.png'
+        };
+
+        function preloadXiaokeImages() {
+            for (const key in xiaokeFiles) {
+                const img = new Image();
+                img.src = xiaokeFiles[key];
+                img.onload = () => {
+                    xiaokeImages[key] = img;
+                };
+                img.onerror = () => {
+                    console.warn(`[Xiaoke Warning] Failed to load ${xiaokeFiles[key]}. Using fallback.`);
+                    xiaokeImages[key] = null;
+                };
+            }
+        }
+        preloadXiaokeImages();
+
+        /* --- QUESTIONS DATA (Platforms 3, 5, 7, 9, 11, 15) --- */
+        const questionsData = [
+            {
+                id: 1,
+                platform: 3,
+                q: "Mengapakah Kepulauan Spratly menjadi kawasan yang penting?",
+                options: ["A. Mempunyai kedudukan geostrategik dan penting dari aspek perdagangan", "B. Menjadi pusat pentadbiran ASEAN", "C. Menjadi pusat kewangan dunia", "D. Mempunyai penduduk yang ramai"],
+                correct: 0
+            },
+            {
+                id: 2,
+                platform: 5,
+                q: "Pemerdagangan orang merupakan ancaman terhadap _____.",
+                options: ["A. Hak asasi manusia dan keselamatan negara", "B. Sistem pendidikan sahaja", "C. Sistem kewangan Islam", "D. Alam sekitar sahaja"],
+                correct: 0
+            },
+            {
+                id: 3,
+                platform: 7,
+                q: "Apakah bentuk halangan perdagangan yang sering dikenakan oleh negara maju?",
+                options: ["A. Tarif dan cukai", "B. Bantuan kewangan", "C. Pinjaman mudah", "D. Pelaburan asing"],
+                correct: 0
+            },
+            {
+                id: 4,
+                platform: 9,
+                q: "Berapakah jumlah pelarian Syria yang diumumkan oleh kerajaan Malaysia untuk diterima pada tahun 2015?",
+                options: ["A. 1,000 orang", "B. 2,000 orang", "C. 3,000 orang", "D. 5,000 orang"],
+                correct: 2
+            },
+            {
+                id: 5,
+                platform: 11,
+                q: "Apakah bencana yang melanda Aceh dan Sri Lanka pada tahun 2004?",
+                options: ["A. Gempa bumi", "B. Tsunami", "C. Banjir besar", "D. Taufan"],
+                correct: 1
+            },
+            {
+                id: 6,
+                platform: 15,
+                q: "Apakah dokumen yang dikeluarkan dalam Sidang Kemuncak Bumi?",
+                options: ["A. Agenda 21", "B. AFTA", "C. SEANWFZ", "D. MSPO"],
+                correct: 0
+            }
+        ];
+
+        /* --- GAME ENGINE & STATE --- */
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const V_WIDTH = 540;
+        const V_HEIGHT = 960;
+
+        let gameState = 'RULES'; // RULES, INTRO, PLAYING, QUESTION, PAUSED, GAMEOVER, VICTORY
+        let introTime = 0;
+        let hearts = 3;
+        let currentPlatform = 1;
+        const TARGET_PLATFORMS = 15;
+        let completedQuestionsCount = 0;
+
+        // Camera
+        let cameraY = 0;
+        let targetCameraY = 0;
+
+        // Screen Shake
+        let screenShakeTimer = 0;
+        let screenShakeIntensity = 0;
+
+        // Box Height
+        const BOX_HEIGHT = 44;
+
+        // Colors palette for boxes
+        const boxColors = [
+            '#ff4757', '#ffa502', '#2ed573', '#1e90ff', '#3742fa',
+            '#9b59b6', '#e84393', '#00d2d3', '#ff6b6b', '#feca57'
+        ];
+
+        let stackedBoxes = [];
+        let movingBox = null;
+        let debrisList = [];
+        let particles = [];
+
+        /* --- XIAOKE CHARACTER ANIMATION STATE --- */
+        const character = {
+            x: V_WIDTH / 2,
+            y: 0
+        };
+
+        const xiaokeState = {
+            state: 'IDLE',
+            timer: 0,
+            breathPhase: 0,
+            jumpProgress: 0,
+            scaleX: 1.0,
+            scaleY: 1.0,
+            offY: 0,
+            rotation: 0,
+            bouncePhase: 0
+        };
+
+        let lastSpawnSide = 'right';
+
+        /* Animated Clouds */
+        let clouds = [];
+        function initClouds() {
+            clouds = [];
+            for (let i = 0; i < 14; i++) {
+                clouds.push({
+                    x: Math.random() * V_WIDTH,
+                    y: Math.random() * V_HEIGHT * 3 - V_HEIGHT * 2,
+                    radius: 25 + Math.random() * 45,
+                    speed: 0.15 + Math.random() * 0.35
+                });
+            }
+        }
+
+        /* Resize Handler */
+        function resizeCanvas() {
+            canvas.width = V_WIDTH;
+            canvas.height = V_HEIGHT;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        /* Initialization */
+        function initGame() {
+            hearts = 3;
+            currentPlatform = 1;
+            completedQuestionsCount = 0;
+            stackedBoxes = [];
+            debrisList = [];
+            particles = [];
+            cameraY = 0;
+            targetCameraY = 0;
+            lastSpawnSide = 'right';
+
+            updateHUD();
+            initClouds();
+
+            // Base platform box (Platform 0)
+            const baseBox = {
+                x: V_WIDTH / 2 - 120,
+                y: V_HEIGHT - 180,
+                width: 240,
+                height: BOX_HEIGHT,
+                color: '#2f3542'
+            };
+            stackedBoxes.push(baseBox);
+
+            character.x = baseBox.x + baseBox.width / 2;
+            character.y = baseBox.y;
+
+            xiaokeState.state = 'IDLE';
+            xiaokeState.timer = 0;
+
+            spawnMovingBox();
+        }
+
+        /* Start Game Sequence after player clicks "开始挑战" */
+        function startGameFromRules() {
+            audio.playClick();
+            audio.unlock();
+            audio.startBGM();
+
+            const rulesModal = document.getElementById('rules-modal');
+            if (rulesModal) rulesModal.classList.remove('active');
+
+            initGame();
+            gameState = 'INTRO';
+            introTime = 0;
+        }
+
+        function getPlatformDifficulty(platform) {
+            if (platform <= 5) return { speed: 3.5, width: 220 };
+            if (platform <= 10) return { speed: 4.8, width: 200 };
+            return { speed: 6.0, width: 180 };
+        }
+
+        function spawnMovingBox() {
+            const diff = getPlatformDifficulty(currentPlatform);
+            const topBox = stackedBoxes[stackedBoxes.length - 1];
+            const width = Math.min(topBox.width, diff.width);
+
+            lastSpawnSide = (lastSpawnSide === 'left') ? 'right' : 'left';
+
+            const startX = (lastSpawnSide === 'left') ? -width : V_WIDTH;
+            const speed = (lastSpawnSide === 'left') ? diff.speed : -diff.speed;
+
+            movingBox = {
+                x: startX,
+                y: topBox.y - BOX_HEIGHT,
+                width: width,
+                height: BOX_HEIGHT,
+                vx: speed,
+                color: boxColors[(currentPlatform - 1) % boxColors.length]
+            };
+        }
+
+        function triggerScreenShake(duration, intensity) {
+            screenShakeTimer = duration;
+            screenShakeIntensity = intensity;
+        }
+
+        /* --- INPUT HANDLERS --- */
+        function handleAction() {
+            if (gameState === 'RULES') return; // Do not respond during rules modal
+
+            audio.unlock();
+
+            if (gameState === 'INTRO') {
+                skipIntro();
+                return;
+            }
+
+            if (gameState !== 'PLAYING' || !movingBox) return;
+
+            // Interactive UI button click sound for Space/Tap
+            audio.playClick();
+
+            const topBox = stackedBoxes[stackedBoxes.length - 1];
+            const box = movingBox;
+            movingBox = null;
+
+            const overlapStart = Math.max(topBox.x, box.x);
+            const overlapEnd = Math.min(topBox.x + topBox.width, box.x + box.width);
+            const overlapWidth = overlapEnd - overlapStart;
+
+            if (overlapWidth > 4) {
+                // SUCCESS LANDING
+                if (box.x < topBox.x) {
+                    const sliceW = topBox.x - box.x;
+                    spawnDebris(box.x, box.y, sliceW, box.height, box.color, -3);
+                }
+                if (box.x + box.width > topBox.x + topBox.width) {
+                    const sliceW = (box.x + box.width) - (topBox.x + topBox.width);
+                    spawnDebris(overlapEnd, box.y, sliceW, box.height, box.color, 3);
+                }
+
+                const placedBox = {
+                    x: overlapStart,
+                    y: box.y,
+                    width: overlapWidth,
+                    height: box.height,
+                    color: box.color
+                };
+                stackedBoxes.push(placedBox);
+
+                createLandingParticles(overlapStart + overlapWidth / 2, box.y);
+                triggerScreenShake(0.18, 4.0);
+
+                targetCameraY = (currentPlatform) * BOX_HEIGHT;
+
+                const triggeredQ = questionsData.find(q => q.platform === currentPlatform);
+                
+                if (triggeredQ) {
+                    setTimeout(() => triggerQuestion(triggeredQ), 320);
+                } else {
+                    currentPlatform++;
+                    updateHUD();
+                    setTimeout(spawnMovingBox, 250);
+                }
+
+            } else {
+                // MISS
+                audio.playWrong();
+                spawnDebris(box.x, box.y, box.width, box.height, box.color, box.vx > 0 ? 4 : -4);
+
+                hearts--;
+                updateHUD();
+
+                if (hearts <= 0) {
+                    gameState = 'GAMEOVER';
+                    showGameOverModal();
+                } else {
+                    setTimeout(spawnMovingBox, 500);
+                }
+            }
+        }
+
+        function spawnDebris(x, y, w, h, color, vx) {
+            debrisList.push({
+                x: x,
+                y: y,
+                width: w,
+                height: h,
+                color: color,
+                vx: vx,
+                vy: -2,
+                rot: 0,
+                vRot: (Math.random() - 0.5) * 0.2
+            });
+        }
+
+        function createLandingParticles(x, y) {
+            for (let i = 0; i < 22; i++) {
+                const isDust = Math.random() < 0.65;
+                particles.push({
+                    x: x + (Math.random() - 0.5) * 45,
+                    y: y,
+                    vx: (Math.random() - 0.5) * 6,
+                    vy: isDust ? -Math.random() * 2.2 : -Math.random() * 4.5,
+                    radius: isDust ? 4 + Math.random() * 6 : 2 + Math.random() * 3,
+                    color: isDust ? 'rgba(255, 255, 255, 0.75)' : '#ffd700',
+                    life: 1.0
+                });
+            }
+        }
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                handleAction();
+            }
+        });
+        canvas.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            handleAction();
+        });
+
+        /* --- HUD CONTROLS --- */
+        function updateHUD() {
+            const heartsStr = '❤️'.repeat(Math.max(0, hearts)) + '🤍'.repeat(Math.max(0, 3 - hearts));
+            document.getElementById('hearts-display').innerText = heartsStr;
+
+            document.getElementById('platform-display').innerText = `第 ${Math.min(currentPlatform, TARGET_PLATFORMS)} 格`;
+
+            questionsData.forEach((q) => {
+                const nodeEl = document.getElementById(`tn-${q.id}`);
+                if (q.id <= completedQuestionsCount) {
+                    nodeEl.className = 'tracker-node completed';
+                    nodeEl.innerHTML = '✔';
+                } else if (currentPlatform >= q.platform) {
+                    nodeEl.className = 'tracker-node active';
+                    if (q.id === 6) nodeEl.innerHTML = '<span class="tracker-finish-flag">🏁</span>';
+                    else nodeEl.innerHTML = q.id;
+                } else {
+                    nodeEl.className = 'tracker-node';
+                    if (q.id === 6) nodeEl.innerHTML = '<span class="tracker-finish-flag">🏁</span>';
+                    else nodeEl.innerHTML = q.id;
+                }
+            });
+
+            const pct = Math.min(100, Math.floor((completedQuestionsCount / 6) * 100));
+            document.getElementById('tracker-line').style.width = pct + '%';
+        }
+
+        /* --- QUESTION SYSTEM --- */
+        let activeQuestion = null;
+
+        function triggerQuestion(qObj) {
+            gameState = 'QUESTION';
+            activeQuestion = qObj;
+            document.getElementById('q-text').innerText = qObj.q;
+            document.getElementById('q-feedback').innerText = '';
+            document.getElementById('q-submit-btn').style.display = 'none';
+
+            const optsContainer = document.getElementById('q-options');
+            optsContainer.innerHTML = '';
+
+            qObj.options.forEach((optText, idx) => {
+                const btn = document.createElement('button');
+                btn.className = 'option-btn';
+                btn.innerText = optText;
+                btn.onclick = () => handleAnswerSelect(idx, btn);
+                optsContainer.appendChild(btn);
+            });
+
+            document.getElementById('question-modal').classList.add('active');
+        }
+
+        function handleAnswerSelect(selectedIdx, btnEl) {
+            if (!activeQuestion) return;
+
+            const allBtns = document.querySelectorAll('.option-btn');
+            allBtns.forEach(b => b.onclick = null);
+
+            if (selectedIdx === activeQuestion.correct) {
+                btnEl.classList.add('correct');
+                audio.playCorrect();
+                document.getElementById('q-feedback').className = 'feedback-msg correct';
+                document.getElementById('q-feedback').innerText = '回答正确！';
+                document.getElementById('q-submit-btn').style.display = 'block';
+            } else {
+                btnEl.classList.add('wrong');
+                audio.playWrong();
+                document.getElementById('q-feedback').className = 'feedback-msg wrong';
+                document.getElementById('q-feedback').innerText = '回答错误，请再试一次！';
+                
+                setTimeout(() => {
+                    allBtns.forEach((b, idx) => {
+                        b.classList.remove('wrong');
+                        b.onclick = () => handleAnswerSelect(idx, b);
+                    });
+                }, 1000);
+            }
+        }
+
+        function continueAfterQuestion() {
+            audio.playClick();
+            document.getElementById('question-modal').classList.remove('active');
+            
+            if (activeQuestion) {
+                if (activeQuestion.id > completedQuestionsCount) {
+                    completedQuestionsCount = activeQuestion.id;
+                }
+            }
+
+            if (currentPlatform >= TARGET_PLATFORMS && completedQuestionsCount >= 6) {
+                updateHUD();
+                gameState = 'VICTORY';
+                
+                // Immediately fade out BGM over 800ms
+                audio.fadeOutBGM(800);
+
+                // Play victory sound after 300ms so it becomes the main focus
+                setTimeout(() => {
+                    audio.playLevelCompleted();
+                }, 300);
+
+                showVictoryModal();
+            } else {
+                currentPlatform++;
+                updateHUD();
+                gameState = 'PLAYING';
+                spawnMovingBox();
+            }
+        }
+
+        /* --- MODAL DIALOGS --- */
+        function togglePause() {
+            audio.playClick();
+            if (gameState === 'PLAYING') {
+                gameState = 'PAUSED';
+                audio.pauseBGM();
+                document.getElementById('pause-modal').classList.add('active');
+            } else if (gameState === 'PAUSED') {
+                gameState = 'PLAYING';
+                audio.resumeBGM();
+                document.getElementById('pause-modal').classList.remove('active');
+            }
+        }
+
+        function toggleSFX() {
+            audio.playClick();
+            audio.sfxEnabled = !audio.sfxEnabled;
+            const btn = document.getElementById('sfx-toggle');
+            btn.innerText = audio.sfxEnabled ? '开启' : '关闭';
+            btn.className = audio.sfxEnabled ? 'toggle-btn' : 'toggle-btn off';
+        }
+
+        function toggleBGM() {
+            audio.playClick();
+            audio.bgmEnabled = !audio.bgmEnabled;
+            const btn = document.getElementById('bgm-toggle');
+            btn.innerText = audio.bgmEnabled ? '开启' : '关闭';
+            btn.className = audio.bgmEnabled ? 'toggle-btn' : 'toggle-btn off';
+            if (audio.bgmEnabled) audio.resumeBGM(); else audio.pauseBGM();
+        }
+
+        function showGameOverModal() {
+            document.getElementById('go-platforms').innerText = `第 ${currentPlatform} 格`;
+            document.getElementById('go-questions').innerText = `${completedQuestionsCount} / 6`;
+            document.getElementById('gameover-modal').classList.add('active');
+        }
+
+        /* --- VICTORY & MAP RETURN COMPLETION FLOW --- */
+        function showVictoryModal() {
+            const stars = hearts === 3 ? '⭐⭐⭐' : hearts === 2 ? '⭐⭐' : '⭐';
+            document.getElementById('star-display').innerText = stars;
+            document.getElementById('victory-modal').classList.add('active');
+            createFireworks();
+        }
+
+        function returnToMainMap() {
+            audio.playClick();
+            localStorage.setItem('level9JustCompleted','true');
+            GameProgression.completeLevel(9, { stars: hearts });
+            audio.fadeOutBGM(500);
+
+            const fadeOverlay = document.getElementById('fade-overlay');
+            if (fadeOverlay) {
+                fadeOverlay.style.pointerEvents = 'auto';
+                fadeOverlay.style.opacity = '1';
+            }
+
+            setTimeout(() => {
+                window.location.href = 'index.html';
+            }, 700);
+        }
+
+        function startGameplayHUD() {
+            document.getElementById('hud').classList.add('visible');
+        }
+
+        function restartGame() {
+            audio.playClick();
+            document.querySelectorAll('.overlay').forEach(el => el.classList.remove('active'));
+            gameState = 'PLAYING';
+            startGameplayHUD();
+            initGame();
+            audio.startBGM();
+        }
+
+        function exitGame() {
+            returnToMainMap();
+        }
+
+        function skipIntro() {
+            gameState = 'PLAYING';
+            startGameplayHUD();
+            initGame();
+        }
+
+        /* Fireworks animation for Victory */
+        let fireworks = [];
+        function createFireworks() {
+            fireworks = [];
+            for (let i = 0; i < 70; i++) {
+                fireworks.push({
+                    x: V_WIDTH / 2 + (Math.random() - 0.5) * 300,
+                    y: V_HEIGHT / 3 + (Math.random() - 0.5) * 200,
+                    vx: (Math.random() - 0.5) * 12,
+                    vy: (Math.random() - 0.5) * 12,
+                    color: `hsl(${Math.random() * 360}, 100%, 60%)`,
+                    life: 1.0
+                });
+            }
+        }
+
+        /* --- XIAOKE ANIMATION STATE MACHINE UPDATE --- */
+        function updateXiaokeAnimation(dt) {
+            if (gameState === 'VICTORY') {
+                xiaokeState.state = 'VICTORY';
+                xiaokeState.bouncePhase += dt * 6;
+                xiaokeState.offY = -Math.abs(Math.sin(xiaokeState.bouncePhase)) * 16;
+                xiaokeState.rotation = Math.sin(xiaokeState.bouncePhase * 0.8) * 0.06;
+                xiaokeState.scaleX = 1.0;
+                xiaokeState.scaleY = 1.0;
+                return;
+            }
+
+            const topBox = stackedBoxes[stackedBoxes.length - 1];
+            if (!topBox) return;
+
+            character.x = topBox.x + topBox.width / 2;
+            xiaokeState.timer += dt;
+
+            if (xiaokeState.state === 'IDLE') {
+                xiaokeState.breathPhase += dt * 4;
+                xiaokeState.offY = Math.sin(xiaokeState.breathPhase) * 1.5;
+                xiaokeState.scaleY = 1.0 + Math.sin(xiaokeState.breathPhase) * 0.01;
+                xiaokeState.scaleX = 1.0 / xiaokeState.scaleY;
+                xiaokeState.rotation = 0;
+                character.y = topBox.y;
+
+                if (xiaokeState.timer > 0.16) {
+                    xiaokeState.state = 'PREP';
+                    xiaokeState.timer = 0;
+                }
+            }
+            else if (xiaokeState.state === 'PREP') {
+                xiaokeState.scaleY = 0.95;
+                xiaokeState.scaleX = 1.03;
+                xiaokeState.offY = 3;
+                xiaokeState.rotation = 0;
+                character.y = topBox.y;
+
+                if (xiaokeState.timer > 0.10) {
+                    xiaokeState.state = 'JUMP_UP';
+                    xiaokeState.timer = 0;
+                    xiaokeState.jumpProgress = 0;
+                }
+            }
+            else if (xiaokeState.state === 'JUMP_UP') {
+                xiaokeState.jumpProgress += dt * 4.2;
+                if (xiaokeState.jumpProgress > 1) xiaokeState.jumpProgress = 1;
+
+                const maxH = 38;
+                const currentH = Math.sin(xiaokeState.jumpProgress * (Math.PI / 2)) * maxH;
+                character.y = topBox.y - currentH;
+
+                xiaokeState.scaleY = 1.05;
+                xiaokeState.scaleX = 0.96;
+                xiaokeState.offY = 0;
+                xiaokeState.rotation = Math.sin(xiaokeState.jumpProgress * Math.PI * 2) * 0.087;
+
+                if (xiaokeState.jumpProgress >= 1.0) {
+                    xiaokeState.state = 'APEX';
+                    xiaokeState.timer = 0;
+                }
+            }
+            else if (xiaokeState.state === 'APEX') {
+                character.y = topBox.y - 38;
+                xiaokeState.scaleY = 1.0;
+                xiaokeState.scaleX = 1.0;
+                xiaokeState.offY = 0;
+
+                if (xiaokeState.timer > 0.08) {
+                    xiaokeState.state = 'FALLING';
+                    xiaokeState.timer = 0;
+                    xiaokeState.jumpProgress = 0;
+                }
+            }
+            else if (xiaokeState.state === 'FALLING') {
+                xiaokeState.jumpProgress += dt * 4.8;
+                if (xiaokeState.jumpProgress > 1) xiaokeState.jumpProgress = 1;
+
+                const maxH = 38;
+                const currentH = (1 - Math.sin(xiaokeState.jumpProgress * (Math.PI / 2))) * maxH;
+                character.y = topBox.y - currentH;
+
+                xiaokeState.scaleY = 1.02;
+                xiaokeState.scaleX = 0.98;
+                xiaokeState.offY = 0;
+                xiaokeState.rotation *= 0.75;
+
+                if (xiaokeState.jumpProgress >= 1.0) {
+                    character.y = topBox.y;
+                    xiaokeState.state = 'LANDING';
+                    xiaokeState.timer = 0;
+
+                    /* Restored soft platform landing audio */
+                    audio.playLand();
+                    createLandingParticles(character.x, topBox.y);
+                    triggerScreenShake(0.18, 3.8);
+                }
+            }
+            else if (xiaokeState.state === 'LANDING') {
+                xiaokeState.scaleY = 0.95;
+                xiaokeState.scaleX = 1.04;
+                xiaokeState.offY = 2;
+                xiaokeState.rotation = 0;
+                character.y = topBox.y;
+
+                if (xiaokeState.timer > 0.19) {
+                    xiaokeState.state = 'IDLE';
+                    xiaokeState.timer = 0;
+                }
+            }
+        }
+
+        /* --- DRAW XIAOKE PNG CHARACTER FRAME --- */
+        function drawXiaokeCharacter(x, feetY) {
+            let imgKey = 'idle';
+            if (xiaokeState.state === 'PREP') imgKey = 'prep';
+            else if (xiaokeState.state === 'JUMP_UP' || xiaokeState.state === 'APEX') imgKey = 'jumpUp';
+            else if (xiaokeState.state === 'FALLING') imgKey = 'falling';
+            else if (xiaokeState.state === 'LANDING') imgKey = 'landing';
+            else if (xiaokeState.state === 'VICTORY') imgKey = 'victory';
+            else imgKey = 'idle';
+
+            const img = xiaokeImages[imgKey];
+
+            ctx.save();
+            ctx.translate(x, feetY + xiaokeState.offY);
+            ctx.rotate(xiaokeState.rotation);
+            ctx.scale(xiaokeState.scaleX, xiaokeState.scaleY);
+
+            // Feet Shadow on Platform Surface
+            ctx.fillStyle = 'rgba(0,0,0,0.22)';
+            ctx.beginPath();
+            ctx.ellipse(0, -2, 22, 6, 0, 0, Math.PI * 2);
+            ctx.fill();
+
+            if (img && img.complete && img.naturalWidth !== 0) {
+                const targetHeight = 98;
+                const aspect = img.width / img.height;
+                const targetWidth = targetHeight * aspect;
+
+                ctx.drawImage(img, -targetWidth / 2, -targetHeight, targetWidth, targetHeight);
+            } else {
+                drawFallbackXiaoke();
+            }
+
+            ctx.restore();
+        }
+
+        function drawFallbackXiaoke() {
+            ctx.fillStyle = '#ff4757';
+            ctx.beginPath();
+            ctx.arc(0, -45, 22, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 12px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('小克', 0, -41);
+        }
+
+        /* --- MAIN RENDER & UPDATE LOOP --- */
+        let lastTime = performance.now();
+
+        function gameLoop(now) {
+            const dt = (now - lastTime) / 1000;
+            lastTime = now;
+
+            update(dt);
+            render();
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        function update(dt) {
+            cameraY += (targetCameraY - cameraY) * 0.08;
+
+            if (screenShakeTimer > 0) {
+                screenShakeTimer -= dt;
+            }
+
+            if (gameState === 'RULES') {
+                return; // Wait for player to press "开始挑战"
+            }
+
+            if (gameState === 'INTRO') {
+                introTime += dt;
+                updateXiaokeAnimation(dt);
+
+                if (introTime >= 4.5) {
+                    skipIntro();
+                }
+                return;
+            }
+
+            if (gameState === 'PLAYING' || gameState === 'VICTORY') {
+                if (movingBox && gameState === 'PLAYING') {
+                    movingBox.x += movingBox.vx;
+
+                    if (movingBox.vx > 0 && movingBox.x > V_WIDTH) {
+                        spawnMovingBox();
+                    } else if (movingBox.vx < 0 && movingBox.x < -movingBox.width) {
+                        spawnMovingBox();
+                    }
+                }
+
+                updateXiaokeAnimation(dt);
+            }
+
+            debrisList.forEach((d) => {
+                d.x += d.vx;
+                d.y += d.vy;
+                d.vy += 0.4;
+                d.rot += d.vRot;
+            });
+            debrisList = debrisList.filter(d => d.y < V_HEIGHT + 200 + cameraY);
+
+            particles.forEach((p) => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= dt * 2;
+            });
+            particles = particles.filter(p => p.life > 0);
+
+            fireworks.forEach(fw => {
+                fw.x += fw.vx;
+                fw.y += fw.vy;
+                fw.life -= dt * 0.8;
+            });
+            fireworks = fireworks.filter(fw => fw.life > 0);
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, V_WIDTH, V_HEIGHT);
+
+            if (gameState === 'RULES' || gameState === 'INTRO') {
+                renderIntro();
+                return;
+            }
+
+            let shakeX = 0, shakeY = 0;
+            if (screenShakeTimer > 0) {
+                shakeX = (Math.random() - 0.5) * screenShakeIntensity;
+                shakeY = (Math.random() - 0.5) * screenShakeIntensity;
+            }
+
+            ctx.save();
+            ctx.translate(shakeX, shakeY);
+
+            // Sky Background
+            const heightRatio = Math.min(1, currentPlatform / TARGET_PLATFORMS);
+            const skyGradient = ctx.createLinearGradient(0, 0, 0, V_HEIGHT);
+            
+            const r1 = Math.floor(13 + heightRatio * 75);
+            const g1 = Math.floor(17 + heightRatio * 145);
+            const b1 = Math.floor(23 + heightRatio * 200);
+
+            const r2 = Math.floor(40 + heightRatio * 180);
+            const g2 = Math.floor(80 + heightRatio * 160);
+            const b2 = Math.floor(140 + heightRatio * 100);
+
+            skyGradient.addColorStop(0, `rgb(${r1}, ${g1}, ${b1})`);
+            skyGradient.addColorStop(1, `rgb(${r2}, ${g2}, ${b2})`);
+            ctx.fillStyle = skyGradient;
+            ctx.fillRect(0, 0, V_WIDTH, V_HEIGHT);
+
+            // Cloud animation
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.22)';
+            clouds.forEach(c => {
+                const drawY = c.y + cameraY * 0.2;
+                ctx.beginPath();
+                ctx.arc(c.x, drawY, c.radius, 0, Math.PI * 2);
+                ctx.arc(c.x + c.radius * 0.6, drawY - 8, c.radius * 0.7, 0, Math.PI * 2);
+                ctx.arc(c.x - c.radius * 0.6, drawY - 8, c.radius * 0.7, 0, Math.PI * 2);
+                ctx.fill();
+            });
+
+            ctx.save();
+            ctx.translate(0, cameraY);
+
+            // Draw Platforms
+            stackedBoxes.forEach((b) => {
+                draw3DPox(b.x, b.y, b.width, b.height, b.color);
+            });
+
+            // Draw Moving Platform Box
+            if (movingBox) {
+                draw3DPox(movingBox.x, movingBox.y, movingBox.width, movingBox.height, movingBox.color);
+            }
+
+            // Draw Sliced Debris
+            debrisList.forEach(d => {
+                ctx.save();
+                ctx.translate(d.x + d.width / 2, d.y + d.height / 2);
+                ctx.rotate(d.rot);
+                draw3DPox(-d.width / 2, -d.height / 2, d.width, d.height, d.color);
+                ctx.restore();
+            });
+
+            // Landing Particles
+            particles.forEach(p => {
+                ctx.fillStyle = p.color;
+                ctx.globalAlpha = Math.max(0, p.life);
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.globalAlpha = 1.0;
+            });
+
+            // Draw Xiaoke Character
+            drawXiaokeCharacter(character.x, character.y);
+
+            ctx.restore(); // camera
+            ctx.restore(); // screen shake
+
+            // Fireworks for Victory
+            if (gameState === 'VICTORY') {
+                fireworks.forEach(fw => {
+                    ctx.fillStyle = fw.color;
+                    ctx.globalAlpha = Math.max(0, fw.life);
+                    ctx.beginPath();
+                    ctx.arc(fw.x, fw.y, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.globalAlpha = 1.0;
+                });
+            }
+        }
+
+        /* Draw 3D-styled Box Platform */
+        function draw3DPox(x, y, width, height, mainColor) {
+            const depth = 12;
+
+            ctx.fillStyle = mainColor;
+            ctx.fillRect(x, y, width, height);
+
+            ctx.fillStyle = adjustColor(mainColor, 40);
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+            ctx.lineTo(x + depth, y - depth);
+            ctx.lineTo(x + width + depth, y - depth);
+            ctx.lineTo(x + width, y);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.fillStyle = adjustColor(mainColor, -40);
+            ctx.beginPath();
+            ctx.moveTo(x + width, y);
+            ctx.lineTo(x + width + depth, y - depth);
+            ctx.lineTo(x + width + depth, y + height - depth);
+            ctx.lineTo(x + width, y + height);
+            ctx.closePath();
+            ctx.fill();
+
+            ctx.strokeStyle = 'rgba(0,0,0,0.15)';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(x, y, width, height);
+        }
+
+        function adjustColor(hex, amt) {
+            let col = hex.replace('#', '');
+            if (col.length === 3) col = col.split('').map(c => c + c).join('');
+            let num = parseInt(col, 16);
+            let r = (num >> 16) + amt;
+            let g = ((num >> 8) & 0x00FF) + amt;
+            let b = (num & 0x0000FF) + amt;
+            r = Math.min(255, Math.max(0, r));
+            g = Math.min(255, Math.max(0, g));
+            b = Math.min(255, Math.max(0, b));
+            return `#${(g | (b << 8) | (r << 16)).toString(16).padStart(6, '0')}`;
+        }
+
+        /* --- INTRO CINEMATIC WITH XIAOKE --- */
+        function renderIntro() {
+            ctx.fillStyle = '#0a0d14';
+            ctx.fillRect(0, 0, V_WIDTH, V_HEIGHT);
+
+            const spotlightR = Math.max(10, Math.min(130, introTime * 95));
+            ctx.save();
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+            ctx.beginPath();
+            ctx.arc(V_WIDTH / 2, V_HEIGHT / 2, spotlightR, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+
+            const introBoxY = V_HEIGHT / 2 + 80 - Math.min(180, introTime * 60);
+            draw3DPox(V_WIDTH / 2 - 90, introBoxY, 180, 40, '#ff4757');
+
+            if (introTime > 1.2) {
+                draw3DPox(V_WIDTH / 2 - 80, introBoxY - 40, 160, 40, '#ffa502');
+            }
+            if (introTime > 2.0) {
+                draw3DPox(V_WIDTH / 2 - 70, introBoxY - 80, 120, 40, '#2ed573');
+            }
+
+            const introFeetY = introTime > 2.0 ? introBoxY - 80 : introTime > 1.2 ? introBoxY - 40 : introBoxY;
+            drawXiaokeCharacter(V_WIDTH / 2, introFeetY);
+
+            if (introTime > 2.2) {
+                ctx.save();
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.58)';
+                ctx.fillRect(0, 0, V_WIDTH, V_HEIGHT);
+
+                ctx.textAlign = 'center';
+
+                ctx.font = '900 50px -apple-system, sans-serif';
+                ctx.fillStyle = '#ffd700';
+                ctx.shadowColor = '#ff9d00';
+                ctx.shadowBlur = 20;
+                ctx.fillText('LEVEL 9', V_WIDTH / 2, V_HEIGHT / 2 - 20);
+
+                if (introTime > 2.8) {
+                    ctx.font = 'bold 34px sans-serif';
+                    ctx.fillStyle = '#ffffff';
+                    ctx.shadowColor = '#00f2fe';
+                    ctx.shadowBlur = 15;
+                    ctx.fillText('跳箱子挑战', V_WIDTH / 2, V_HEIGHT / 2 + 40);
+                }
+
+                if (introTime > 3.4) {
+                    ctx.font = '20px sans-serif';
+                    ctx.fillStyle = '#e2e8f0';
+                    ctx.shadowBlur = 0;
+                    ctx.fillText('看看你的眼力手速！', V_WIDTH / 2, V_HEIGHT / 2 + 95);
+                }
+
+                ctx.restore();
+            }
+        }
+
+        // Initialize setup on load (game stays on RULES screen)
+        initGame();
+
+        // Start Render Loop
+        requestAnimationFrame(gameLoop);
+
+    </script>
+</body>
+</html>
